@@ -24,9 +24,10 @@ export const TaskBoard: React.FC = () => {
   const { activeWorkspace, members } = useAuth();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [hideEmptyColumns, setHideEmptyColumns] = useState(false);
 
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -34,10 +35,16 @@ export const TaskBoard: React.FC = () => {
   // Quick Task Creation
   const [isCreating, setIsCreating] = useState(false);
   const [quickTitle, setQuickTitle] = useState("");
-  const [quickAssigneeId, setQuickAssigneeId] = useState<string>("unassigned");
+  const [quickAssigneeId, setQuickAssigneeId] = useState<string>("");
 
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverMemberId, setDragOverMemberId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (members.length > 0 && !quickAssigneeId) {
+      setQuickAssigneeId(members[0].id);
+    }
+  }, [members, quickAssigneeId]);
 
   const fetchTasks = async () => {
     if (!activeWorkspace) return;
@@ -68,12 +75,21 @@ export const TaskBoard: React.FC = () => {
     return true;
   });
 
-  // Group tasks by Member (and Unassigned)
-  const unassignedTasks = filteredTasks.filter((t) => !t.assignee);
+  // Group tasks by team member (if a task has no assignee, group under admin/first member)
   const memberTasksMap: Record<string, TaskItem[]> = {};
   members.forEach((m) => {
-    memberTasksMap[m.id] = filteredTasks.filter((t) => t.assignee?.id === m.id);
+    memberTasksMap[m.id] = filteredTasks.filter((t) => {
+      if (t.assignee) {
+        return t.assignee.id === m.id;
+      }
+      return m.role === "admin" || m.id === members[0]?.id;
+    });
   });
+
+  // Filter columns if hideEmptyColumns is active
+  const displayedMembers = hideEmptyColumns
+    ? members.filter((m) => (memberTasksMap[m.id]?.length || 0) > 0)
+    : members;
 
   // Drag & Drop Handlers with Persistent Backend Updates & Rollback
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
@@ -98,7 +114,8 @@ export const TaskBoard: React.FC = () => {
     const taskToMove = tasks.find((t) => t.id === taskId);
     if (!taskToMove) return;
 
-    const targetMember = targetMemberId === "unassigned" ? null : members.find((m) => m.id === targetMemberId);
+    const targetMember = members.find((m) => m.id === targetMemberId);
+    if (!targetMember) return;
 
     // Optimistic UI update
     setTasks((prev) =>
@@ -109,7 +126,7 @@ export const TaskBoard: React.FC = () => {
       const updated = await apiRequest<TaskItem>(`/api/tasks/${taskId}/move/`, {
         method: "PATCH",
         body: JSON.stringify({
-          assignee_id: targetMemberId === "unassigned" ? null : targetMemberId,
+          assignee_id: targetMemberId,
         }),
       });
       // Replace with server authoritative response
@@ -125,12 +142,13 @@ export const TaskBoard: React.FC = () => {
     e.preventDefault();
     if (!quickTitle.trim()) return;
 
+    const assignee = quickAssigneeId || members[0]?.id;
     try {
       const newTask = await apiRequest<TaskItem>("/api/tasks/", {
         method: "POST",
         body: JSON.stringify({
           title: quickTitle.trim(),
-          assignee_id: quickAssigneeId === "unassigned" ? null : quickAssigneeId,
+          assignee_id: assignee,
           status: "inbox",
           priority: "medium",
         }),
@@ -147,16 +165,16 @@ export const TaskBoard: React.FC = () => {
     <div className="flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden bg-white">
       {/* Top Filter & Action Bar */}
       <div className="px-6 py-3 border-b border-neutral-200 bg-white flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3 flex-1 max-w-xl">
-          {/* Search */}
-          <div className="relative w-full max-w-xs">
-            <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="flex items-center gap-3 flex-1 max-w-2xl">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-xs">
+            <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search tasks by title or content..."
+              placeholder="Filter tasks by title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 pl-8 pr-3 text-xs w-full rounded-md border border-neutral-200 bg-neutral-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-neutral-400"
+              className="w-full h-8 pl-8 pr-3 text-xs bg-neutral-50 rounded-md border border-neutral-200 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
             />
           </div>
 
@@ -186,6 +204,21 @@ export const TaskBoard: React.FC = () => {
             <option value="medium">Medium</option>
             <option value="low">Low</option>
           </select>
+
+          {/* Hide Empty Columns Toggle */}
+          <button
+            type="button"
+            onClick={() => setHideEmptyColumns(!hideEmptyColumns)}
+            className={clsx(
+              "h-8 text-xs px-2.5 rounded-md border flex items-center gap-1.5 transition-colors",
+              hideEmptyColumns
+                ? "bg-neutral-900 text-white border-neutral-900"
+                : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
+            )}
+          >
+            <SlidersHorizontal className="w-3 h-3" />
+            <span>{hideEmptyColumns ? "Hiding Empty" : "Hide Empty Columns"}</span>
+          </button>
         </div>
 
         {/* New Task Trigger */}
@@ -214,7 +247,6 @@ export const TaskBoard: React.FC = () => {
             onChange={(e) => setQuickAssigneeId(e.target.value)}
             className="h-9 px-3 text-xs bg-white rounded-md border border-neutral-200 focus:outline-none"
           >
-            <option value="unassigned">Unassigned</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>
                 Assign to {m.user.name}
@@ -238,60 +270,9 @@ export const TaskBoard: React.FC = () => {
         </form>
       )}
 
-      {/* Horizontally Scrollable Row of Team Members + Unassigned Column */}
+      {/* Horizontally Scrollable Row of Team Members */}
       <div className="flex-1 overflow-x-auto p-6 flex gap-5 items-start">
-        {/* 1. Unassigned Column */}
-        <div
-          onDragOver={(e) => handleDragOver(e, "unassigned")}
-          onDrop={(e) => handleDrop(e, "unassigned")}
-          className={clsx(
-            "w-80 shrink-0 flex flex-col max-h-full rounded-xl border bg-neutral-50/70 p-3 transition-colors",
-            dragOverMemberId === "unassigned"
-              ? "border-blue-500 bg-blue-50/20 ring-2 ring-blue-500/20"
-              : "border-neutral-200"
-          )}
-        >
-          {/* Column Header */}
-          <div className="flex items-center justify-between pb-3 px-1 border-b border-neutral-200/80 mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-neutral-200 text-neutral-700 flex items-center justify-center font-semibold text-xs">
-                ?
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-neutral-900 tracking-tight">
-                  Unassigned
-                </h3>
-                <span className="text-[11px] text-neutral-400">Needs owner</span>
-              </div>
-            </div>
-            <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-neutral-200/60 text-neutral-700">
-              {unassignedTasks.length}
-            </span>
-          </div>
-
-          {/* Vertical Task Stack */}
-          <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 pr-0.5 min-h-[120px]">
-            {unassignedTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onClick={() => {
-                  setSelectedTask(task);
-                  setIsDetailOpen(true);
-                }}
-                onDragStart={handleDragStart}
-              />
-            ))}
-            {unassignedTasks.length === 0 && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-neutral-200 rounded-lg text-neutral-400 text-xs">
-                <span>No unassigned tasks</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 2. Team Member Columns */}
-        {members.map((member) => {
+        {displayedMembers.map((member) => {
           const memberTasks = memberTasksMap[member.id] || [];
           const isDragOver = dragOverMemberId === member.id;
 

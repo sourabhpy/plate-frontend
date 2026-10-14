@@ -217,7 +217,6 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               }}
               className="text-xs font-medium px-3 py-1.5 rounded-md border border-neutral-200 bg-white text-neutral-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              <option value="unassigned">Unassigned</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.user.name} ({m.title || m.role})
