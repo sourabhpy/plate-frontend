@@ -12,6 +12,7 @@ import { VoiceTaskModal } from "@/components/ai/VoiceTaskModal";
 import { DocumentAnalyzerModal } from "@/components/ai/DocumentAnalyzerModal";
 import { NotificationDrawer } from "@/components/notifications/NotificationDrawer";
 import { AuthView } from "@/components/auth/AuthView";
+import { PlateBrand } from "@/components/ui/PlateBrand";
 
 function PlateApp() {
   const { user, isLoading } = useAuth();
@@ -32,11 +33,8 @@ function PlateApp() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-3">
-        <div className="flex items-center gap-1.5">
-          <span className="text-2xl font-bold tracking-tight text-neutral-950">Plate</span>
-          <span className="w-2 h-2 rounded-full bg-blue-600 mb-0.5"></span>
-        </div>
-        <div className="w-6 h-6 border-2 border-neutral-200 border-t-black rounded-full animate-spin mt-2" />
+        <PlateBrand size="xl" />
+        <div className="w-6 h-6 border-2 border-neutral-200 border-t-black rounded-full animate-spin mt-2 flex-shrink-0" />
       </div>
     );
   }
@@ -67,7 +65,16 @@ function PlateApp() {
       />
 
       <main className="flex-1 flex overflow-hidden">
-        {activeTab === "board" && <TaskBoard />}
+        {activeTab === "board" && (
+          <TaskBoard
+            onOpenVoiceModal={() => {
+              setExtractingTranscript(undefined);
+              setExtractingMsgId(undefined);
+              setIsVoiceModalOpen(true);
+            }}
+            onOpenDocModal={() => setIsDocModalOpen(true)}
+          />
+        )}
         {activeTab === "communications" && (
           <ChatView onExtractTaskFromMessage={handleExtractTaskFromMessage} />
         )}

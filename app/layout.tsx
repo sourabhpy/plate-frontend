@@ -14,7 +14,7 @@ const fustat = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Plate — AI-Native Team Productivity",
+  title: "🍽️ plate | AI-Native Team Productivity",
   description: "Unified task management, Slack-inspired API communications, voice task extraction, document analysis, and persistent team memory.",
 };
 

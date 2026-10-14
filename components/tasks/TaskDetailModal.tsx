@@ -187,22 +187,22 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
         {/* Evidence Quote (if extracted by AI) */}
         {task.evidence_quote && (
-          <div className="p-3 bg-blue-50/60 border border-blue-200 rounded-md flex items-start gap-2.5 text-xs text-blue-950">
-            <MessageSquareQuote className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          <div className="p-4 bg-blue-50/70 rounded-xl shadow-[0px_0px_20px_rgba(37,99,235,0.08)] flex items-start gap-3 text-sm text-blue-950">
+            <MessageSquareQuote className="w-5 h-5 text-blue-600 shrink-0 mt-0.5 flex-shrink-0" />
             <div>
               <span className="font-semibold text-blue-900 block mb-0.5">
                 AI Source Evidence ({task.source_type}):
               </span>
-              <p className="italic text-blue-800">"{task.evidence_quote}"</p>
+              <p className="italic text-blue-850">"{task.evidence_quote}"</p>
             </div>
           </div>
         )}
 
         {/* Metadata Grid: Assignee, Deadline */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-neutral-50/80 rounded-xl shadow-[0px_0px_20px_rgba(0,0,0,0.04)]">
           {/* Assignee */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Assignee
             </label>
             <select
@@ -215,7 +215,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   body: JSON.stringify({ assignee_id: val === "unassigned" ? null : val }),
                 }).then(onUpdate);
               }}
-              className="text-xs font-medium px-3 py-1.5 rounded-md border border-neutral-200 bg-white text-neutral-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="text-sm font-medium px-3 py-2 rounded-lg border border-neutral-200 bg-white text-neutral-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -227,7 +227,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
           {/* Deadline */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
               Deadline
             </label>
             <input
@@ -241,45 +241,45 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   body: JSON.stringify({ deadline: val || null }),
                 }).then(onUpdate);
               }}
-              className="text-xs font-medium px-3 py-1.5 rounded-md border border-neutral-200 bg-white text-neutral-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="text-sm font-medium px-3 py-2 rounded-lg border border-neutral-200 bg-white text-neutral-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
         </div>
 
         {/* Attachments Section */}
-        <div className="flex flex-col gap-2 pt-2 border-t border-neutral-100">
+        <div className="flex flex-col gap-2.5 pt-2 border-t border-neutral-100">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-semibold text-neutral-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Paperclip className="w-3.5 h-3.5 text-neutral-500" />
-              <span>Attachments ({task.attachments?.length || 0})</span>
+            <h4 className="text-xs font-bold text-neutral-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Paperclip className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+              <span className="line-clamp-1">Attachments ({task.attachments?.length || 0})</span>
             </h4>
 
-            <label className="cursor-pointer text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
-              <Upload className="w-3.5 h-3.5" />
-              <span>{isUploading ? "Uploading..." : "Upload File"}</span>
+            <label className="cursor-pointer text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+              <Upload className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="line-clamp-1">{isUploading ? "Uploading..." : "Upload File"}</span>
               <input type="file" onChange={handleFileUpload} className="hidden" disabled={isUploading} />
             </label>
           </div>
 
           {task.attachments && task.attachments.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-1">
               {task.attachments.map((att: any) => (
                 <a
                   key={att.id}
                   href={att.file_url || att.file}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center justify-between p-2.5 rounded-md border border-neutral-200 bg-white hover:bg-neutral-50 transition-colors text-xs text-neutral-800"
+                  className="flex items-center justify-between p-3 rounded-xl bg-white shadow-[0px_0px_20px_rgba(0,0,0,0.06)] hover:bg-neutral-50 transition-colors text-sm text-neutral-800"
                 >
                   <span className="truncate max-w-[180px] font-medium">{att.file_name}</span>
-                  <span className="text-[10px] text-neutral-400 font-mono">
+                  <span className="text-xs text-neutral-400 font-mono flex-shrink-0 ml-2">
                     {Math.round((att.file_size || 0) / 1024)} KB
                   </span>
                 </a>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-neutral-400 italic">No files attached yet.</p>
+            <p className="text-sm text-neutral-400 italic">No files attached yet.</p>
           )}
         </div>
 

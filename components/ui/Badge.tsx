@@ -24,8 +24,8 @@ export const Badge: React.FC<BadgeProps> = ({ children, variant = "neutral", cla
   };
 
   const sizes = {
-    sm: "px-2 py-0.5 text-[11px]",
-    md: "px-2.5 py-1 text-xs",
+    sm: "px-2 py-0.5 text-xs font-semibold",
+    md: "px-2.5 py-1 text-sm font-semibold",
   };
 
   return (

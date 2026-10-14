@@ -27,32 +27,32 @@ export const MyTasksView: React.FC = () => {
   const completedTasks = tasks.filter((t) => t.status === "done");
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 md:p-8 max-w-5xl mx-auto w-full">
-      <div className="flex flex-col gap-1 pb-6 border-b border-neutral-200">
-        <h1 className="text-xl font-bold tracking-tight text-neutral-950">My Tasks</h1>
-        <p className="text-xs text-neutral-500">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 max-w-5xl mx-auto w-full">
+      <div className="flex flex-col gap-1.5 pb-6 border-b border-neutral-200">
+        <h1 className="text-2xl font-bold tracking-tight text-neutral-950">My Tasks</h1>
+        <p className="text-sm text-neutral-500">
           Dedicated view of your assignments, deadlines, updates, and attachments across {activeWorkspace?.name}.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
-        <div className="p-4 rounded-lg border border-neutral-200 bg-white">
-          <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
+        <div className="p-5 rounded-2xl bg-white shadow-[0px_0px_30px_rgba(0,0,0,0.1)]">
+          <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-1.5">
             Active Assignments
           </span>
-          <span className="text-2xl font-bold text-neutral-900">{activeTasks.length}</span>
+          <span className="text-3xl font-bold text-neutral-900">{activeTasks.length}</span>
         </div>
-        <div className="p-4 rounded-lg border border-neutral-200 bg-white">
-          <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">
+        <div className="p-5 rounded-2xl bg-white shadow-[0px_0px_30px_rgba(0,0,0,0.1)]">
+          <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-1.5">
             Completed
           </span>
-          <span className="text-2xl font-bold text-emerald-600">{completedTasks.length}</span>
+          <span className="text-3xl font-bold text-emerald-600">{completedTasks.length}</span>
         </div>
-        <div className="p-4 rounded-lg border border-neutral-200 bg-white">
-          <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">
+        <div className="p-5 rounded-2xl bg-white shadow-[0px_0px_30px_rgba(0,0,0,0.1)]">
+          <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-1.5">
             Due Soon
           </span>
-          <span className="text-2xl font-bold text-amber-600">
+          <span className="text-3xl font-bold text-amber-600">
             {activeTasks.filter((t) => t.deadline).length}
           </span>
         </div>
@@ -60,11 +60,11 @@ export const MyTasksView: React.FC = () => {
 
       <div className="flex flex-col gap-6">
         <div>
-          <h2 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-2">
+          <h2 className="text-base font-bold text-neutral-900 mb-3.5 flex items-center gap-2">
             <span>In Flight ({activeTasks.length})</span>
           </h2>
           {activeTasks.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {activeTasks.map((task) => (
                 <TaskCard
                   key={task.id}
@@ -77,7 +77,7 @@ export const MyTasksView: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="p-8 border border-neutral-200 rounded-lg text-center text-xs text-neutral-400 bg-neutral-50/50">
+            <div className="p-8 rounded-2xl bg-neutral-50/70 shadow-[0px_0px_30px_rgba(0,0,0,0.06)] text-center text-sm text-neutral-500">
               You currently have no active assignments.
             </div>
           )}
@@ -85,10 +85,10 @@ export const MyTasksView: React.FC = () => {
 
         {completedTasks.length > 0 && (
           <div className="pt-4 border-t border-neutral-200">
-            <h2 className="text-sm font-bold text-neutral-500 mb-3">
+            <h2 className="text-base font-bold text-neutral-500 mb-3.5">
               Completed Tasks ({completedTasks.length})
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {completedTasks.map((task) => (
                 <TaskCard
                   key={task.id}

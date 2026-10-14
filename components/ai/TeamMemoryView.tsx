@@ -4,79 +4,83 @@ import React, { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { FullscreenMobileSearch } from "@/components/ui/FullscreenMobileSearch";
 import {
   Sparkles,
   Search,
   MessageSquare,
   FileText,
   Kanban,
-  ExternalLink,
-  BookOpen,
   RefreshCw,
-  HelpCircle,
+  X,
 } from "lucide-react";
+import clsx from "clsx";
 
-interface MemoryCitation {
-  source_type: string;
-  source_id: string;
+interface CitationItem {
+  source_type: "message" | "task" | "document";
+  id: string | number;
   title: string;
+  snippet?: string;
   score: number;
+}
+
+interface AskMemoryResponse {
+  question: string;
+  answer: string;
+  citations: CitationItem[];
 }
 
 export const TeamMemoryView: React.FC = () => {
   const { activeWorkspace } = useAuth();
   const [question, setQuestion] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [answer, setAnswer] = useState<string | null>(null);
-  const [citations, setCitations] = useState<MemoryCitation[]>([]);
+  const [citations, setCitations] = useState<CitationItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
   const [indexMessage, setIndexMessage] = useState<string | null>(null);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   const sampleQuestions = [
-    "What did we decide in the last planning discussion?",
-    "Why was a particular task postponed?",
-    "What commitments did the team make?",
-    "What is Marcus currently working on?",
-    "Why are we using 2-second HTTP polling instead of WebSockets?",
+    "What are our technical commitments for this sprint?",
+    "Why did we choose PostgreSQL over MongoDB?",
+    "What tasks are currently assigned to Elena?",
+    "What security constraints were decided for Direct Messages?",
   ];
 
   const handleAsk = async (queryToAsk?: string) => {
     const q = (queryToAsk || question).trim();
-    if (!q || isLoading) return;
+    if (!q || !activeWorkspace) return;
 
-    setQuestion(q);
+    if (queryToAsk) setQuestion(queryToAsk);
     setIsLoading(true);
     setAnswer(null);
     setCitations([]);
 
     try {
-      const res = await apiRequest<{
-        answer: string;
-        citations: MemoryCitation[];
-      }>("/api/ai/memory/ask/", {
+      const res = await apiRequest<AskMemoryResponse>("/api/ai/ask-memory/", {
         method: "POST",
         body: JSON.stringify({ question: q }),
       });
       setAnswer(res.answer);
       setCitations(res.citations || []);
-    } catch (err) {
-      console.error("Failed to query team memory", err);
-      setAnswer("An error occurred while querying team memory. Please try again.");
+    } catch (err: any) {
+      console.error("Failed to query memory", err);
+      setAnswer("Sorry, I could not synthesize an answer from team memory at this moment.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleBatchIndex = async () => {
+    if (!activeWorkspace) return;
     setIsIndexing(true);
     setIndexMessage(null);
     try {
-      const res = await apiRequest<{ message: string; indexed_count: number }>(
-        "/api/ai/memory/index-batch/",
+      const res = await apiRequest<{ status: string; total_embedded: number }>(
+        "/api/ai/batch-index/",
         { method: "POST" }
       );
-      setIndexMessage(res.message);
+      setIndexMessage(`Successfully indexed ${res.total_embedded} records into team memory.`);
     } catch (err) {
       console.error("Failed to batch index", err);
     } finally {
@@ -84,18 +88,29 @@ export const TeamMemoryView: React.FC = () => {
     }
   };
 
+  const questionChips = sampleQuestions.map((sq, i) => ({
+    id: `chip-${i}`,
+    label: sq,
+    active: question === sq,
+    onClick: () => {
+      setQuestion(sq);
+      handleAsk(sq);
+      setIsMobileSearchOpen(false);
+    },
+  }));
+
   return (
-    <div className="flex-1 overflow-y-auto p-6 md:p-8 max-w-4xl mx-auto w-full">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-neutral-200 gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-xl font-bold tracking-tight text-neutral-950">Team Memory</h1>
-            <span className="text-[11px] font-mono uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+          <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-950">Team Memory</h1>
+            <span className="text-xs font-mono uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
               RAG + Authoritative DB
             </span>
           </div>
-          <p className="text-xs text-neutral-500">
+          <p className="text-sm text-neutral-500">
             Ask natural language questions about past decisions, discussions, commitments, and current assignments.
           </p>
         </div>
@@ -105,59 +120,82 @@ export const TeamMemoryView: React.FC = () => {
           size="sm"
           onClick={handleBatchIndex}
           isLoading={isIndexing}
-          className="self-start md:self-auto text-xs"
+          className="self-start md:self-auto shadow-xs flex-shrink-0"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Re-index Workspace</span>
+          <RefreshCw className="w-4 h-4 flex-shrink-0" />
+          <span className="line-clamp-1">Re-index Workspace</span>
         </Button>
       </div>
 
       {indexMessage && (
-        <div className="my-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
+        <div className="my-4 p-4 rounded-xl bg-emerald-50 text-sm text-emerald-800 shadow-[0px_0px_20px_rgba(16,185,129,0.08)]">
           {indexMessage}
         </div>
       )}
 
-      {/* Query Composer */}
+      {/* Query Composer (Desktop & Mobile) */}
       <div className="my-6">
+        {/* Mobile search trigger button */}
+        <div className="md:hidden">
+          <button
+            type="button"
+            onClick={() => setIsMobileSearchOpen(true)}
+            className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl bg-white shadow-[0px_0px_30px_rgba(0,0,0,0.1)] text-left text-neutral-500 transition-colors"
+          >
+            <div className="flex items-center gap-3 truncate">
+              <Search className="w-5 h-5 text-neutral-400 flex-shrink-0" />
+              <span className="text-sm line-clamp-1">
+                {question || "Ask about decisions, workload, tech stack..."}
+              </span>
+            </div>
+            <span className="text-xs font-bold text-blue-600 flex-shrink-0 ml-2">
+              Ask 🍽️ <strong>plate</strong>
+            </span>
+          </button>
+        </div>
+
+        {/* Desktop query input */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleAsk();
           }}
-          className="relative flex items-center"
+          className="relative hidden md:flex items-center rounded-2xl bg-white shadow-[0px_0px_30px_rgba(0,0,0,0.1)] overflow-hidden"
         >
-          <Search className="w-4 h-4 text-neutral-400 absolute left-4" />
+          <Search className="w-5 h-5 text-neutral-400 absolute left-4 flex-shrink-0 pointer-events-none" />
           <input
             type="text"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Ask about team decisions, postponed tasks, or member workload..."
-            className="w-full h-12 pl-11 pr-24 text-sm bg-white rounded-lg border border-neutral-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-neutral-400"
+            className="w-full h-14 pl-12 pr-36 text-base bg-white focus:outline-none placeholder:text-neutral-400"
           />
           <Button
             size="sm"
             type="submit"
             isLoading={isLoading}
             disabled={!question.trim()}
-            className="absolute right-2"
+            className="absolute right-3"
           >
-            Ask Plate
+            <span className="line-clamp-1">
+              Ask 🍽️ <strong className="font-bold">plate</strong>
+            </span>
           </Button>
         </form>
 
         {/* Suggested Queries Pills */}
-        <div className="flex flex-wrap gap-2 mt-3 items-center">
-          <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mr-1">
+        <div className="flex flex-wrap gap-2 mt-3.5 items-center">
+          <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider mr-1">
             Try:
           </span>
           {sampleQuestions.map((sq, i) => (
             <button
               key={i}
+              type="button"
               onClick={() => handleAsk(sq)}
-              className="text-xs px-2.5 py-1 rounded-full border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 transition-colors text-left"
+              className="text-xs px-3.5 py-1.5 rounded-full bg-white shadow-[0px_0px_20px_rgba(0,0,0,0.06)] hover:bg-neutral-50 text-neutral-700 transition-colors text-left"
             >
-              {sq}
+              <span className="line-clamp-1">{sq}</span>
             </button>
           ))}
         </div>
@@ -165,49 +203,51 @@ export const TeamMemoryView: React.FC = () => {
 
       {/* Answer Output */}
       {isLoading && (
-        <div className="p-8 border border-neutral-200 rounded-lg bg-neutral-50/50 flex flex-col items-center justify-center gap-3 text-neutral-500 animate-pulse">
-          <Sparkles className="w-6 h-6 text-blue-600 animate-spin" />
-          <span className="text-xs font-medium">
+        <div className="p-8 rounded-2xl bg-white shadow-[0px_0px_30px_rgba(0,0,0,0.08)] flex flex-col items-center justify-center gap-3 text-neutral-600 animate-pulse my-6">
+          <Sparkles className="w-7 h-7 text-blue-600 animate-spin flex-shrink-0" />
+          <span className="text-sm font-medium text-center">
             Synthesizing authoritative database records & historical vector memory...
           </span>
         </div>
       )}
 
       {answer && !isLoading && (
-        <div className="flex flex-col gap-6 animate-in fade-in duration-200">
-          <div className="p-6 rounded-lg border border-neutral-200 bg-white shadow-xs">
-            <div className="flex items-center gap-2 mb-3 text-xs font-bold text-neutral-900">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <span>Plate Answer</span>
+        <div className="flex flex-col gap-6 animate-in fade-in duration-200 my-6">
+          <div className="p-6 sm:p-7 rounded-2xl bg-white shadow-[0px_0px_30px_rgba(0,0,0,0.1)] flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-sm font-bold text-neutral-900">
+              <Sparkles className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <span>
+                🍽️ <strong className="font-bold">plate</strong> Answer
+              </span>
             </div>
-            <div className="text-xs text-neutral-800 leading-relaxed whitespace-pre-wrap">
+            <div className="text-sm sm:text-base text-neutral-800 leading-relaxed whitespace-pre-wrap">
               {answer}
             </div>
           </div>
 
           {/* Citations & Evidence */}
           {citations.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            <div className="flex flex-col gap-3">
+              <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider px-1">
                 Supporting Evidence & Sources ({citations.length})
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {citations.map((c, idx) => (
                   <div
                     key={idx}
-                    className="p-3 rounded-lg border border-neutral-200 bg-neutral-50/50 flex items-center justify-between text-xs"
+                    className="p-4 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] flex items-center justify-between text-sm gap-2"
                   >
-                    <div className="flex items-center gap-2 truncate">
+                    <div className="flex items-center gap-2.5 truncate">
                       {c.source_type === "message" ? (
-                        <MessageSquare className="w-4 h-4 text-neutral-400 shrink-0" />
+                        <MessageSquare className="w-4 h-4 text-neutral-400 flex-shrink-0" />
                       ) : c.source_type === "task" ? (
-                        <Kanban className="w-4 h-4 text-neutral-400 shrink-0" />
+                        <Kanban className="w-4 h-4 text-neutral-400 flex-shrink-0" />
                       ) : (
-                        <FileText className="w-4 h-4 text-neutral-400 shrink-0" />
+                        <FileText className="w-4 h-4 text-neutral-400 flex-shrink-0" />
                       )}
                       <span className="font-semibold text-neutral-900 truncate">{c.title}</span>
                     </div>
-                    <span className="text-[10px] font-mono text-neutral-400 shrink-0 ml-2">
+                    <span className="text-xs font-mono text-neutral-400 flex-shrink-0 ml-2">
                       score: {c.score}
                     </span>
                   </div>
@@ -217,6 +257,42 @@ export const TeamMemoryView: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Fullscreen Search Input on Mobile */}
+      <FullscreenMobileSearch
+        isOpen={isMobileSearchOpen}
+        onClose={() => setIsMobileSearchOpen(false)}
+        value={question}
+        onChange={setQuestion}
+        placeholder="Ask about team decisions, postponed tasks..."
+        chips={questionChips}
+        onSubmit={() => {
+          handleAsk();
+          setIsMobileSearchOpen(false);
+        }}
+        submitButtonText="Ask 🍽️ plate"
+      >
+        <div className="flex flex-col gap-3">
+          <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+            Quick Suggestions
+          </span>
+          {sampleQuestions.map((sq, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => {
+                setQuestion(sq);
+                handleAsk(sq);
+                setIsMobileSearchOpen(false);
+              }}
+              className="p-3.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 text-sm font-medium text-neutral-800 text-left transition-colors flex items-center justify-between"
+            >
+              <span className="line-clamp-2">{sq}</span>
+              <Search className="w-4 h-4 text-neutral-400 flex-shrink-0 ml-2" />
+            </button>
+          ))}
+        </div>
+      </FullscreenMobileSearch>
     </div>
   );
 };

@@ -24,6 +24,7 @@ import {
   ArrowUp,
   X,
   UserCheck,
+  Menu,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -109,6 +110,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
   const [newChannelName, setNewChannelName] = useState("");
   const [newChannelTopic, setNewChannelTopic] = useState("");
   const [selectedDmMemberId, setSelectedDmMemberId] = useState<string>("");
+  const [isMobileChannelsOpen, setIsMobileChannelsOpen] = useState(false);
 
   // --- STRICT INCREMENTAL 2-SECOND POLLING ENGINE ---
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -496,114 +498,161 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
   const channels = conversations.filter((c) => c.type === "channel");
   const directMessages = conversations.filter((c) => c.type === "dm");
 
-  return (
-    <div className="flex-1 flex h-[calc(100vh-3.5rem)] overflow-hidden bg-white">
-      {/* 1. Conversations Sidebar (Slack-style Minimalist) */}
-      <div className="w-64 shrink-0 border-r border-neutral-200 bg-neutral-50/50 flex flex-col justify-between">
-        <div className="flex flex-col overflow-y-auto">
-          {/* Header */}
-          <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
-            <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
-              Communications
-            </span>
+  const renderChannelsList = (isMobile = false) => (
+    <div className="flex flex-col h-full justify-between bg-neutral-50/70">
+      <div className="flex flex-col overflow-y-auto">
+        {/* Header */}
+        <div className="p-4 border-b border-neutral-200 flex items-center justify-between bg-white">
+          <span className="text-sm font-bold text-neutral-900 uppercase tracking-wider">
+            Communications
+          </span>
+          <div className="flex items-center gap-1">
             <button
               onClick={() => {
                 setCreateType("channel");
                 setShowCreateModal(true);
+                if (isMobile) setIsMobileChannelsOpen(false);
               }}
-              className="p-1 rounded hover:bg-neutral-200 text-neutral-600 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-600 transition-colors flex-shrink-0"
               title="Create Channel or Direct Message"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 flex-shrink-0" />
+            </button>
+            {isMobile && (
+              <button
+                onClick={() => setIsMobileChannelsOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-800 flex-shrink-0"
+              >
+                <X className="w-5 h-5 flex-shrink-0" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Channels Section */}
+        <div className="p-3">
+          <div className="flex items-center justify-between text-xs font-bold text-neutral-400 uppercase tracking-wider px-2 mb-1.5">
+            <span>Channels</span>
+            <span className="text-xs font-mono">{channels.length}</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            {channels.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => {
+                  setActiveConversation(c);
+                  if (isMobile) setIsMobileChannelsOpen(false);
+                }}
+                className={clsx(
+                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors",
+                  c.id === activeConversation?.id
+                    ? "bg-black text-white font-semibold shadow-xs"
+                    : "text-neutral-700 hover:bg-neutral-100"
+                )}
+              >
+                <Hash className="w-4 h-4 opacity-60 flex-shrink-0" />
+                <span className="line-clamp-1">{c.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Direct Messages Section */}
+        <div className="p-3 pt-0">
+          <div className="flex items-center justify-between text-xs font-bold text-neutral-400 uppercase tracking-wider px-2 mb-1.5">
+            <span>Direct Messages</span>
+            <button
+              onClick={() => {
+                setCreateType("dm");
+                setShowCreateModal(true);
+                if (isMobile) setIsMobileChannelsOpen(false);
+              }}
+              className="text-neutral-400 hover:text-neutral-700 p-0.5"
+            >
+              <Plus className="w-3.5 h-3.5 flex-shrink-0" />
             </button>
           </div>
-
-          {/* Channels Section */}
-          <div className="p-3">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-400 uppercase tracking-wider px-2 mb-1">
-              <span>Channels</span>
-              <span className="text-[10px]">{channels.length}</span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              {channels.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setActiveConversation(c)}
-                  className={clsx(
-                    "flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium text-left transition-colors",
-                    c.id === activeConversation?.id
-                      ? "bg-black text-white font-semibold"
-                      : "text-neutral-700 hover:bg-neutral-100"
-                  )}
-                >
-                  <Hash className="w-3.5 h-3.5 opacity-60" />
-                  <span className="truncate">{c.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Direct Messages Section */}
-          <div className="p-3 pt-0">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-400 uppercase tracking-wider px-2 mb-1">
-              <span>Direct Messages</span>
+          <div className="flex flex-col gap-1">
+            {directMessages.map((c) => (
               <button
+                key={c.id}
                 onClick={() => {
-                  setCreateType("dm");
-                  setShowCreateModal(true);
+                  setActiveConversation(c);
+                  if (isMobile) setIsMobileChannelsOpen(false);
                 }}
-                className="text-neutral-400 hover:text-neutral-700"
+                className={clsx(
+                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-left transition-colors",
+                  c.id === activeConversation?.id
+                    ? "bg-black text-white font-semibold shadow-xs"
+                    : "text-neutral-700 hover:bg-neutral-100"
+                )}
               >
-                <Plus className="w-3 h-3" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 flex-shrink-0" />
+                <span className="line-clamp-1">{c.display_name}</span>
               </button>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              {directMessages.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setActiveConversation(c)}
-                  className={clsx(
-                    "flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium text-left transition-colors",
-                    c.id === activeConversation?.id
-                      ? "bg-black text-white font-semibold"
-                      : "text-neutral-700 hover:bg-neutral-100"
-                  )}
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="truncate">{c.display_name}</span>
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
-        </div>
-
-        {/* Polling Health Indicator */}
-        <div className="p-3 border-t border-neutral-200 text-[10px] text-neutral-400 font-mono flex items-center justify-between">
-          <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>2s HTTP Sync Active</span>
-          </span>
-          <span>Stateless</span>
         </div>
       </div>
+
+      {/* Polling Health Indicator */}
+      <div className="p-3 border-t border-neutral-200 text-xs text-neutral-400 font-mono flex items-center justify-between bg-white">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+          <span className="line-clamp-1">2s Sync Active</span>
+        </span>
+        <span className="flex-shrink-0">Stateless</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex-1 flex h-[calc(100vh-3.5rem)] overflow-hidden bg-white">
+      {/* 1. Desktop Conversations Sidebar */}
+      <div className="hidden md:flex w-64 shrink-0 border-r border-neutral-200 flex-col justify-between">
+        {renderChannelsList(false)}
+      </div>
+
+      {/* Mobile Channels Drawer Overlay */}
+      {isMobileChannelsOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex md:hidden animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0"
+            onClick={() => setIsMobileChannelsOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="relative w-72 bg-white h-full flex flex-col shadow-2xl z-10 animate-in slide-in-from-left duration-200">
+            {renderChannelsList(true)}
+          </div>
+        </div>
+      )}
 
       {/* 2. Main Conversation Area */}
       <div className="flex-1 flex flex-col bg-white">
         {activeConversation ? (
           <>
             {/* Header */}
-            <div className="h-14 border-b border-neutral-200 px-6 flex items-center justify-between shrink-0 bg-white">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-bold text-neutral-950 flex items-center gap-1.5">
+            <div className="h-14 border-b border-neutral-200 px-4 md:px-6 flex items-center justify-between shrink-0 bg-white">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsMobileChannelsOpen(true)}
+                  className="md:hidden p-1.5 -ml-1 text-neutral-600 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 flex-shrink-0"
+                  title="Open Channels"
+                >
+                  <Menu className="w-5 h-5 flex-shrink-0" />
+                </button>
+
+                <span className="text-base font-bold text-neutral-950 flex items-center gap-2">
                   {activeConversation.type === "channel" ? (
-                    <Hash className="w-4 h-4 text-neutral-400" />
+                    <Hash className="w-4 h-4 text-neutral-400 flex-shrink-0" />
                   ) : (
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
                   )}
-                  {activeConversation.display_name}
+                  <span className="line-clamp-1">{activeConversation.display_name}</span>
                 </span>
                 {activeConversation.topic && (
-                  <span className="hidden md:inline text-xs text-neutral-400 truncate max-w-md border-l border-neutral-200 pl-3">
+                  <span className="hidden lg:inline text-xs text-neutral-400 truncate max-w-md border-l border-neutral-200 pl-3">
                     {activeConversation.topic}
                   </span>
                 )}
@@ -641,7 +690,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                   <div
                     key={msg.id}
                     className={clsx(
-                      "group flex items-start gap-3 rounded-lg p-2 hover:bg-neutral-50/80 transition-colors",
+                      "group flex items-start gap-3 rounded-xl p-2.5 hover:bg-neutral-50/80 transition-colors",
                       msg.isOptimistic && "opacity-60"
                     )}
                   >
@@ -649,43 +698,43 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
 
                     <div className="flex-1 min-w-0">
                       {/* Sender & Timestamp */}
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-neutral-900">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-sm font-bold text-neutral-900">
                           {msg.sender.name}
                         </span>
-                        <span className="text-[10px] text-neutral-400">
+                        <span className="text-xs text-neutral-400">
                           {new Date(msg.created_at).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
                         </span>
                         {msg.is_edited && (
-                          <span className="text-[9px] text-neutral-400 italic">edited</span>
+                          <span className="text-xs text-neutral-400 italic">edited</span>
                         )}
                       </div>
 
                       {/* Message Content by Type */}
                       {msg.message_type === "text" && (
-                        <p className="text-xs text-neutral-800 leading-relaxed break-words whitespace-pre-wrap">
+                        <p className="text-sm text-neutral-800 leading-relaxed break-words whitespace-pre-wrap">
                           {msg.content}
                         </p>
                       )}
 
                       {msg.message_type === "audio" && (
-                        <div className="flex items-center gap-3 p-2.5 rounded-lg border border-neutral-200 bg-neutral-50 max-w-sm mt-1">
+                        <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] max-w-sm mt-1.5">
                           <button
                             onClick={() => togglePlayAudio(msg.id, msg.audio_url || (msg as any).audio_file)}
-                            className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors shrink-0"
+                            className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors shrink-0 flex-shrink-0"
                           >
                             {playingAudioId === msg.id ? (
-                              <Pause className="w-3.5 h-3.5" />
+                              <Pause className="w-4 h-4 flex-shrink-0" />
                             ) : (
-                              <Play className="w-3.5 h-3.5 ml-0.5" />
+                              <Play className="w-4 h-4 ml-0.5 flex-shrink-0" />
                             )}
                           </button>
                           <div className="flex-1 flex flex-col">
-                            <span className="text-xs font-semibold text-neutral-900">Voice Note</span>
-                            <span className="text-[10px] text-neutral-400 font-mono">
+                            <span className="text-sm font-semibold text-neutral-900 line-clamp-1">Voice Note</span>
+                            <span className="text-xs text-neutral-400 font-mono">
                               {msg.audio_duration ? `${Math.round(msg.audio_duration)}s audio` : "Audio message"}
                             </span>
                           </div>
@@ -697,30 +746,32 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                           href={msg.file_url || (msg as any).file}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-2 p-2.5 rounded-lg border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 transition-colors text-xs text-neutral-900 mt-1 max-w-sm"
+                          className="inline-flex items-center gap-2.5 p-3 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] hover:shadow-[0px_0px_30px_rgba(0,0,0,0.12)] transition-all text-sm text-neutral-900 mt-1.5 max-w-sm"
                         >
-                          <Paperclip className="w-4 h-4 text-neutral-500 shrink-0" />
-                          <span className="truncate font-medium">{msg.file_name || "Attachment"}</span>
-                          <Download className="w-3.5 h-3.5 text-neutral-400 ml-auto" />
+                          <Paperclip className="w-4 h-4 text-neutral-500 shrink-0 flex-shrink-0" />
+                          <span className="line-clamp-1 font-medium">{msg.file_name || "Attachment"}</span>
+                          <Download className="w-4 h-4 text-neutral-400 ml-auto flex-shrink-0" />
                         </a>
                       )}
 
                       {/* Actions Bar on Hover */}
-                      <div className="mt-1 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="mt-1 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => openThread(msg)}
-                          className="text-[11px] font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1"
+                          className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-neutral-100"
                         >
-                          <MessageSquare className="w-3 h-3" />
-                          <span>{msg.reply_count > 0 ? `${msg.reply_count} replies` : "Reply in thread"}</span>
+                          <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="line-clamp-1">
+                            {msg.reply_count > 0 ? `${msg.reply_count} replies` : "Reply in thread"}
+                          </span>
                         </button>
 
                         <button
                           onClick={() => onExtractTaskFromMessage && onExtractTaskFromMessage(msg)}
-                          className="text-[11px] font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1 ml-2"
+                          className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-blue-50"
                         >
-                          <Sparkles className="w-3 h-3" />
-                          <span>Extract Task</span>
+                          <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span className="line-clamp-1">Extract Task</span>
                         </button>
                       </div>
                     </div>
@@ -734,33 +785,33 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
             {/* Composer */}
             <div className="p-4 border-t border-neutral-200 bg-white">
               {isRecording ? (
-                <div className="flex items-center justify-between p-3 rounded-lg border border-red-200 bg-red-50/50">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-red-700">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping" />
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-red-50 text-red-700 shadow-[0px_0px_25px_rgba(239,68,68,0.1)]">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping flex-shrink-0" />
                     <span>Recording Voice Message: {recordingSeconds}s</span>
                   </div>
                   <Button variant="danger" size="sm" onClick={stopRecording}>
-                    <Square className="w-3 h-3" />
-                    <span>Stop & Send</span>
+                    <Square className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="line-clamp-1">Stop & Send</span>
                   </Button>
                 </div>
               ) : (
                 <form
                   onSubmit={handleSendMessage}
-                  className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white p-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
+                  className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
                 >
-                  <label className="cursor-pointer p-1.5 text-neutral-400 hover:text-neutral-700 transition-colors">
-                    <Paperclip className="w-4 h-4" />
+                  <label className="cursor-pointer p-1.5 text-neutral-400 hover:text-neutral-700 transition-colors flex-shrink-0">
+                    <Paperclip className="w-4 h-4 flex-shrink-0" />
                     <input type="file" onChange={handleFileUpload} className="hidden" />
                   </label>
 
                   <button
                     type="button"
                     onClick={startRecording}
-                    className="p-1.5 text-neutral-400 hover:text-blue-600 transition-colors"
+                    className="p-1.5 text-neutral-400 hover:text-blue-600 transition-colors flex-shrink-0"
                     title="Record voice message"
                   >
-                    <Mic className="w-4 h-4" />
+                    <Mic className="w-4 h-4 flex-shrink-0" />
                   </button>
 
                   <input
@@ -768,57 +819,69 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     placeholder={`Message ${activeConversation.display_name}...`}
-                    className="flex-1 text-xs text-neutral-900 border-none p-1 focus:outline-none placeholder:text-neutral-400"
+                    className="flex-1 text-sm sm:text-base text-neutral-900 border-none p-1 focus:outline-none placeholder:text-neutral-400"
                   />
 
-                  <button
+                  <Button
                     type="submit"
+                    size="sm"
                     disabled={!inputText.trim() || isSending}
-                    className="p-1.5 rounded-md bg-black text-white hover:bg-neutral-800 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                    isLoading={isSending}
+                    className="shrink-0 flex-shrink-0"
                   >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
+                    <Send className="w-4 h-4 flex-shrink-0" />
+                  </Button>
                 </form>
               )}
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-xs text-neutral-400">
-            Select or create a conversation to start chatting
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-neutral-400 text-sm">
+            <MessageSquare className="w-12 h-12 text-neutral-300 mb-3 flex-shrink-0" />
+            <h3 className="text-base font-bold text-neutral-700">Select a Conversation</h3>
+            <p className="text-sm text-neutral-500 mt-1 max-w-sm">
+              Choose a channel or team member direct message to start chatting and extracting tasks.
+            </p>
+            <button
+              onClick={() => setIsMobileChannelsOpen(true)}
+              className="mt-4 md:hidden px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold"
+            >
+              <span className="line-clamp-1">View Channels</span>
+            </button>
           </div>
         )}
       </div>
 
       {/* 3. Thread Replies Drawer */}
       {activeThreadParent && (
-        <div className="w-80 shrink-0 border-l border-neutral-200 bg-white flex flex-col">
+        <div className="fixed md:relative inset-0 md:inset-auto z-20 w-full md:w-80 shrink-0 bg-white flex flex-col md:border-l md:border-neutral-200 shadow-2xl md:shadow-none animate-in slide-in-from-right duration-200">
           <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
-            <span className="text-xs font-bold text-neutral-900">Thread</span>
+            <span className="text-sm font-bold text-neutral-900">Thread</span>
             <button
               onClick={() => setActiveThreadParent(null)}
-              className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-800"
+              className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-800 flex-shrink-0"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5 flex-shrink-0" />
             </button>
           </div>
 
-          <div className="p-4 border-b border-neutral-100 bg-neutral-50/50">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="p-4 border-b border-neutral-100 bg-neutral-50/60">
+            <div className="flex items-center gap-2 mb-1.5">
               <Avatar name={activeThreadParent.sender.name} size="xs" />
-              <span className="text-xs font-bold text-neutral-900">
+              <span className="text-sm font-bold text-neutral-900">
                 {activeThreadParent.sender.name}
               </span>
             </div>
-            <p className="text-xs text-neutral-700">{activeThreadParent.content}</p>
+            <p className="text-sm text-neutral-700 leading-relaxed">{activeThreadParent.content}</p>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
             {threadReplies.map((r) => (
-              <div key={r.id} className="flex items-start gap-2 text-xs">
+              <div key={r.id} className="flex items-start gap-2.5 text-sm">
                 <Avatar name={r.sender.name} size="xs" />
                 <div className="flex-1">
                   <span className="font-semibold text-neutral-900">{r.sender.name}</span>
-                  <p className="text-neutral-700 mt-0.5">{r.content}</p>
+                  <p className="text-neutral-700 mt-0.5 text-sm leading-relaxed">{r.content}</p>
                 </div>
               </div>
             ))}
@@ -830,10 +893,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
               value={threadInput}
               onChange={(e) => setThreadInput(e.target.value)}
               placeholder="Reply..."
-              className="flex-1 h-8 text-xs border border-neutral-200 rounded px-2.5 focus:outline-none focus:border-blue-500"
+              className="flex-1 h-9 text-sm border border-neutral-200 rounded-lg px-3 focus:outline-none focus:border-blue-500"
             />
             <Button size="sm" type="submit" disabled={!threadInput.trim()}>
-              Reply
+              <span className="line-clamp-1">Reply</span>
             </Button>
           </form>
         </div>
@@ -841,9 +904,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
 
       {/* Create Channel / DM Dialog */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white rounded-lg border border-neutral-200 shadow-xl max-w-sm w-full p-5 flex flex-col gap-4">
-            <h3 className="text-sm font-bold text-neutral-950">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-[0px_0px_30px_rgba(0,0,0,0.15)] max-w-sm w-full p-6 flex flex-col gap-4">
+            <h3 className="text-base font-bold text-neutral-950">
               {createType === "channel" ? "Create New Channel" : "Start Direct Message"}
             </h3>
 
@@ -854,23 +917,23 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                   placeholder="channel-name (e.g. project-apollo)"
                   value={newChannelName}
                   onChange={(e) => setNewChannelName(e.target.value)}
-                  className="h-9 px-3 text-xs border border-neutral-200 rounded-md focus:outline-none focus:border-blue-500"
+                  className="h-10 px-3.5 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-blue-500"
                 />
                 <input
                   type="text"
                   placeholder="Topic / purpose (optional)"
                   value={newChannelTopic}
                   onChange={(e) => setNewChannelTopic(e.target.value)}
-                  className="h-9 px-3 text-xs border border-neutral-200 rounded-md focus:outline-none focus:border-blue-500"
+                  className="h-10 px-3.5 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:border-blue-500"
                 />
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-neutral-600">Select Member:</label>
+                <label className="text-xs font-bold text-neutral-600 uppercase tracking-wider">Select Member:</label>
                 <select
                   value={selectedDmMemberId}
                   onChange={(e) => setSelectedDmMemberId(e.target.value)}
-                  className="h-9 px-3 text-xs border border-neutral-200 rounded-md focus:outline-none"
+                  className="h-10 px-3 text-sm border border-neutral-200 rounded-lg focus:outline-none"
                 >
                   <option value="">Select a member...</option>
                   {members
@@ -886,10 +949,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
 
             <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
               <Button size="sm" variant="ghost" onClick={() => setShowCreateModal(false)}>
-                Cancel
+                <span className="line-clamp-1">Cancel</span>
               </Button>
               <Button size="sm" onClick={handleCreateConversation}>
-                {createType === "channel" ? "Create Channel" : "Start Chat"}
+                <span className="line-clamp-1">{createType === "channel" ? "Create Channel" : "Start Chat"}</span>
               </Button>
             </div>
           </div>

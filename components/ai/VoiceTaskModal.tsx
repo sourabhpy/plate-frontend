@@ -187,54 +187,58 @@ export const VoiceTaskModal: React.FC<VoiceTaskModalProps> = ({
       onClose={onClose}
       title={
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-blue-600" />
+          <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0" />
           <span>Voice & AI Task Extraction</span>
         </div>
       }
-      description="Record or transcribe audio. Plate extracts commitments, matches workspace members, and quotes supporting evidence."
+      description={
+        <span>
+          Record or transcribe audio. 🍽️ <strong className="font-bold">plate</strong> extracts commitments, matches workspace members, and quotes supporting evidence.
+        </span>
+      }
       maxWidth="3xl"
     >
       <div className="flex flex-col gap-6">
         {/* Step 1: Input selector (Record / Upload / Text) */}
         {extractedTasks.length === 0 && (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 p-1 bg-neutral-100 rounded-lg max-w-sm">
+            <div className="flex items-center gap-2 p-1.5 bg-neutral-100 rounded-xl max-w-sm">
               <button
                 onClick={() => setMode("record")}
                 className={clsx(
-                  "flex-1 py-1 text-xs font-semibold rounded-md transition-colors",
+                  "flex-1 py-1.5 text-sm font-semibold rounded-lg transition-colors",
                   mode === "record" ? "bg-white text-neutral-900 shadow-xs" : "text-neutral-600 hover:text-neutral-900"
                 )}
               >
-                Record Audio
+                <span className="line-clamp-1">Record Audio</span>
               </button>
               <button
                 onClick={() => setMode("upload")}
                 className={clsx(
-                  "flex-1 py-1 text-xs font-semibold rounded-md transition-colors",
+                  "flex-1 py-1.5 text-sm font-semibold rounded-lg transition-colors",
                   mode === "upload" ? "bg-white text-neutral-900 shadow-xs" : "text-neutral-600 hover:text-neutral-900"
                 )}
               >
-                Upload File
+                <span className="line-clamp-1">Upload File</span>
               </button>
               <button
                 onClick={() => setMode("text")}
                 className={clsx(
-                  "flex-1 py-1 text-xs font-semibold rounded-md transition-colors",
+                  "flex-1 py-1.5 text-sm font-semibold rounded-lg transition-colors",
                   mode === "text" ? "bg-white text-neutral-900 shadow-xs" : "text-neutral-600 hover:text-neutral-900"
                 )}
               >
-                Paste Transcript
+                <span className="line-clamp-1">Paste Text</span>
               </button>
             </div>
 
             {/* Attribution toggle */}
-            <label className="flex items-center gap-2 text-xs text-neutral-600 cursor-pointer">
+            <label className="flex items-center gap-2.5 text-sm text-neutral-600 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isDirectRecording}
                 onChange={(e) => setIsDirectRecording(e.target.checked)}
-                className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-neutral-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
               />
               <span>
                 I am the speaker in this recording (assign first-person commitments "I will..." to me)
@@ -242,7 +246,7 @@ export const VoiceTaskModal: React.FC<VoiceTaskModalProps> = ({
             </label>
 
             {mode === "record" && (
-              <div className="flex flex-col items-center justify-center p-8 border border-neutral-200 rounded-lg bg-neutral-50/50 gap-4">
+              <div className="flex flex-col items-center justify-center p-8 rounded-2xl bg-neutral-50/70 shadow-[0px_0px_30px_rgba(0,0,0,0.08)] gap-4">
                 {isRecording ? (
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center animate-pulse">
@@ -359,25 +363,25 @@ export const VoiceTaskModal: React.FC<VoiceTaskModalProps> = ({
                 </span>
               </div>
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3.5">
                 {extractedTasks.map((t, idx) => (
                   <div
                     key={idx}
-                    className="p-3.5 rounded-lg border border-neutral-200 bg-white shadow-xs flex flex-col gap-2.5"
+                    className="p-4 rounded-xl bg-white shadow-[0px_0px_30px_rgba(0,0,0,0.1)] flex flex-col gap-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <input
                         type="text"
                         value={t.title}
                         onChange={(e) => handleUpdateTaskField(idx, "title", e.target.value)}
-                        className="text-xs font-bold text-neutral-900 flex-1 border-b border-transparent hover:border-neutral-200 focus:border-blue-500 focus:outline-none"
+                        className="text-sm font-bold text-neutral-900 flex-1 border-b border-transparent hover:border-neutral-200 focus:border-blue-500 focus:outline-none"
                       />
                       <button
                         onClick={() => handleRemoveTask(idx)}
-                        className="text-neutral-400 hover:text-red-600 p-1"
+                        className="text-neutral-400 hover:text-red-600 p-1.5 rounded-md hover:bg-neutral-100 flex-shrink-0"
                         title="Remove task"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4 flex-shrink-0" />
                       </button>
                     </div>
 
@@ -385,13 +389,13 @@ export const VoiceTaskModal: React.FC<VoiceTaskModalProps> = ({
                       value={t.description}
                       onChange={(e) => handleUpdateTaskField(idx, "description", e.target.value)}
                       rows={2}
-                      className="text-xs text-neutral-600 p-2 rounded border border-neutral-100 focus:outline-none focus:border-blue-500 resize-none"
+                      className="text-sm text-neutral-700 p-2.5 rounded-lg border border-neutral-100 focus:outline-none focus:border-blue-500 resize-none"
                     />
 
                     {/* Metadata controls */}
                     <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-neutral-100">
                       {/* Assignee */}
-                      <div className="flex items-center gap-1.5 text-xs">
+                      <div className="flex items-center gap-1.5 text-sm">
                         <span className="text-neutral-400 font-medium">Assignee:</span>
                         <select
                           value={t.assignee_id || "unassigned"}
@@ -402,7 +406,7 @@ export const VoiceTaskModal: React.FC<VoiceTaskModalProps> = ({
                               e.target.value === "unassigned" ? null : e.target.value
                             )
                           }
-                          className="text-xs px-2 py-1 rounded border border-neutral-200 bg-white"
+                          className="text-sm px-2.5 py-1.5 rounded-lg border border-neutral-200 bg-white"
                         >
                           <option value="unassigned">Unassigned (No Owner)</option>
                           {members.map((m) => (
@@ -414,12 +418,12 @@ export const VoiceTaskModal: React.FC<VoiceTaskModalProps> = ({
                       </div>
 
                       {/* Priority */}
-                      <div className="flex items-center gap-1.5 text-xs">
+                      <div className="flex items-center gap-1.5 text-sm">
                         <span className="text-neutral-400 font-medium">Priority:</span>
                         <select
                           value={t.priority}
                           onChange={(e) => handleUpdateTaskField(idx, "priority", e.target.value)}
-                          className="text-xs px-2 py-1 rounded border border-neutral-200 bg-white"
+                          className="text-sm px-2.5 py-1.5 rounded-lg border border-neutral-200 bg-white"
                         >
                           <option value="low">Low</option>
                           <option value="medium">Medium</option>
@@ -431,10 +435,10 @@ export const VoiceTaskModal: React.FC<VoiceTaskModalProps> = ({
                       {/* Evidence Quote */}
                       {t.evidence_quote && (
                         <div
-                          className="flex items-center gap-1 text-[11px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded italic ml-auto max-w-xs truncate"
+                          className="flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md italic ml-auto max-w-xs truncate"
                           title={`Evidence quote: "${t.evidence_quote}"`}
                         >
-                          <MessageSquareQuote className="w-3 h-3 shrink-0" />
+                          <MessageSquareQuote className="w-3.5 h-3.5 shrink-0 flex-shrink-0" />
                           <span className="truncate">"{t.evidence_quote}"</span>
                         </div>
                       )}

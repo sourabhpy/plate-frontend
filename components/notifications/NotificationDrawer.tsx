@@ -90,36 +90,36 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/30 backdrop-blur-xs flex justify-end animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-black/40 backdrop-blur-xs flex justify-end animate-in fade-in duration-150">
       <div className="fixed inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-sm bg-white border-l border-neutral-200 h-full flex flex-col shadow-2xl z-10 animate-in slide-in-from-right duration-200">
+      <div className="relative w-full max-w-sm bg-white h-full flex flex-col shadow-[0px_0px_30px_rgba(0,0,0,0.2)] z-10 animate-in slide-in-from-right duration-200">
         {/* Drawer Header */}
-        <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
+        <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-neutral-800" />
-            <h3 className="text-sm font-bold text-neutral-950">Notifications</h3>
+            <Bell className="w-5 h-5 text-neutral-800 flex-shrink-0" />
+            <h3 className="text-base font-bold text-neutral-950">Notifications</h3>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleMarkAllRead}
-              className="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1"
+              className="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1.5 py-1 px-2 rounded-md hover:bg-neutral-100 transition-colors"
               title="Mark all as read"
             >
-              <CheckCheck className="w-3.5 h-3.5" />
-              <span>Read all</span>
+              <CheckCheck className="w-4 h-4 flex-shrink-0" />
+              <span className="line-clamp-1">Read all</span>
             </button>
             <button
               onClick={onClose}
-              className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-800"
+              className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-800 flex-shrink-0"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5 flex-shrink-0" />
             </button>
           </div>
         </div>
 
         {/* Notifications List */}
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5">
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
           {notifications.map((n) => (
             <div
               key={n.id}
@@ -131,20 +131,20 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 }
               }}
               className={clsx(
-                "p-3 rounded-lg border transition-all text-xs flex flex-col gap-1 cursor-pointer",
+                "p-4 rounded-xl transition-all text-sm flex flex-col gap-1.5 cursor-pointer",
                 n.is_read
-                  ? "border-neutral-200 bg-white hover:bg-neutral-50"
-                  : "border-blue-200 bg-blue-50/40 hover:bg-blue-50/70"
+                  ? "bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] hover:bg-neutral-50"
+                  : "bg-blue-50/70 shadow-[0px_0px_25px_rgba(37,99,235,0.12)] hover:bg-blue-50/90"
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="font-semibold text-neutral-900">{n.title}</span>
+                <span className="font-semibold text-neutral-900 leading-snug">{n.title}</span>
                 {!n.is_read && (
                   <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1" />
                 )}
               </div>
-              <p className="text-neutral-600 leading-relaxed">{n.message}</p>
-              <span className="text-[10px] text-neutral-400 font-mono mt-1">
+              <p className="text-neutral-600 text-sm leading-relaxed">{n.message}</p>
+              <span className="text-xs text-neutral-400 font-mono mt-1">
                 {new Date(n.created_at).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -154,9 +154,9 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
           ))}
 
           {notifications.length === 0 && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-neutral-400 text-xs">
-              <Bell className="w-8 h-8 text-neutral-300 mb-2" />
-              <span>You're all caught up!</span>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-neutral-400 text-sm">
+              <Bell className="w-8 h-8 text-neutral-300 mb-2 flex-shrink-0" />
+              <span className="line-clamp-1">You're all caught up!</span>
             </div>
           )}
         </div>

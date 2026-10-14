@@ -102,20 +102,24 @@ export const DocumentAnalyzerModal: React.FC<DocumentAnalyzerModalProps> = ({
       onClose={onClose}
       title={
         <div className="flex items-center gap-2">
-          <FileText className="w-5 h-5 text-neutral-800" />
+          <FileText className="w-5 h-5 text-neutral-800 flex-shrink-0" />
           <span>AI Document & Image Analysis</span>
         </div>
       }
-      description="Upload PDFs, screenshots, or text specs. Plate extracts insights, flags risks, and suggests action items."
+      description={
+        <span>
+          Upload PDFs, screenshots, or text specs. 🍽️ <strong className="font-bold">plate</strong> extracts insights, flags risks, and suggests action items.
+        </span>
+      }
       maxWidth="3xl"
     >
       <div className="flex flex-col gap-6">
         {/* Upload Drop Area */}
         {!result && (
-          <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-neutral-200 rounded-lg bg-neutral-50/50 gap-3">
-            <Upload className="w-8 h-8 text-neutral-400" />
-            <label className="cursor-pointer text-xs font-semibold text-blue-600 hover:text-blue-700">
-              <span>{selectedFile ? selectedFile.name : "Select PDF, image, or document"}</span>
+          <div className="flex flex-col items-center justify-center p-8 rounded-2xl bg-neutral-50/70 shadow-[0px_0px_30px_rgba(0,0,0,0.08)] gap-3.5">
+            <Upload className="w-9 h-9 text-neutral-400 flex-shrink-0" />
+            <label className="cursor-pointer text-sm font-semibold text-blue-600 hover:text-blue-700">
+              <span className="line-clamp-1">{selectedFile ? selectedFile.name : "Select PDF, image, or document"}</span>
               <input
                 type="file"
                 accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md"
@@ -123,19 +127,19 @@ export const DocumentAnalyzerModal: React.FC<DocumentAnalyzerModalProps> = ({
                 className="hidden"
               />
             </label>
-            <span className="text-[11px] text-neutral-400">
+            <span className="text-xs text-neutral-400">
               PDF, Screenshots, PNG, JPG, Text up to 20MB
             </span>
 
             {selectedFile && (
-              <Button size="md" onClick={handleAnalyze} isLoading={isAnalyzing} className="mt-2">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Analyze Document</span>
+              <Button size="md" onClick={handleAnalyze} isLoading={isAnalyzing} className="mt-2 shadow-xs">
+                <Sparkles className="w-4 h-4 flex-shrink-0" />
+                <span className="line-clamp-1">Analyze Document</span>
               </Button>
             )}
 
-            <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 mt-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-neutral-500" />
+            <div className="flex items-center gap-1.5 text-xs text-neutral-400 mt-2">
+              <ShieldCheck className="w-4 h-4 text-neutral-500 flex-shrink-0" />
               <span>Safety Sandboxed: Document text is parsed as untrusted data</span>
             </div>
           </div>
@@ -145,33 +149,33 @@ export const DocumentAnalyzerModal: React.FC<DocumentAnalyzerModalProps> = ({
         {result && (
           <div className="flex flex-col gap-5">
             {/* Summary */}
-            <div className="p-4 rounded-lg border border-neutral-200 bg-neutral-50/60 flex flex-col gap-1.5">
-              <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
+            <div className="p-5 rounded-2xl bg-neutral-50/80 shadow-[0px_0px_30px_rgba(0,0,0,0.06)] flex flex-col gap-2">
+              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
                 Executive Summary: {result.file_name}
               </span>
-              <p className="text-xs text-neutral-800 leading-relaxed">{result.summary}</p>
+              <p className="text-sm text-neutral-800 leading-relaxed">{result.summary}</p>
             </div>
 
             {/* Findings & Issues */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-lg border border-neutral-200 bg-white">
-                <span className="text-xs font-bold text-neutral-900 block mb-2 flex items-center gap-1.5">
-                  <FileCheck className="w-4 h-4 text-emerald-600" />
+              <div className="p-5 rounded-2xl bg-white shadow-[0px_0px_30px_rgba(0,0,0,0.1)]">
+                <span className="text-sm font-bold text-neutral-900 block mb-2.5 flex items-center gap-2">
+                  <FileCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                   <span>Key Findings</span>
                 </span>
-                <ul className="text-xs text-neutral-700 space-y-1.5 list-disc list-inside">
+                <ul className="text-sm text-neutral-700 space-y-1.5 list-disc list-inside">
                   {result.key_findings.map((f, i) => (
                     <li key={i}>{f}</li>
                   ))}
                 </ul>
               </div>
 
-              <div className="p-4 rounded-lg border border-red-200 bg-red-50/30">
-                <span className="text-xs font-bold text-red-700 block mb-2 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-red-600" />
+              <div className="p-5 rounded-2xl bg-red-50/40 shadow-[0px_0px_30px_rgba(239,68,68,0.1)]">
+                <span className="text-sm font-bold text-red-700 block mb-2.5 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
                   <span>Flagged Risks & Blockers</span>
                 </span>
-                <ul className="text-xs text-red-800 space-y-1.5 list-disc list-inside">
+                <ul className="text-sm text-red-800 space-y-1.5 list-disc list-inside">
                   {result.issues.map((iss, i) => (
                     <li key={i}>{iss}</li>
                   ))}
@@ -181,25 +185,25 @@ export const DocumentAnalyzerModal: React.FC<DocumentAnalyzerModalProps> = ({
 
             {/* Suggested Follow-up Tasks */}
             {result.suggested_tasks.length > 0 && (
-              <div className="flex flex-col gap-3 pt-2 border-t border-neutral-200">
+              <div className="flex flex-col gap-3 pt-2 border-t border-neutral-100">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
                     Suggested Action Items ({result.suggested_tasks.length})
                   </h4>
-                  <span className="text-[11px] text-neutral-400">
+                  <span className="text-xs text-neutral-400">
                     One-click add to workspace board
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2.5">
                   {result.suggested_tasks.map((task, i) => (
                     <div
                       key={i}
-                      className="p-3 rounded-lg border border-neutral-200 bg-white flex items-center justify-between gap-3 text-xs"
+                      className="p-4 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3 text-sm"
                     >
                       <div>
-                        <span className="font-semibold text-neutral-900 block">{task.title}</span>
-                        <span className="text-neutral-500">{task.description}</span>
+                        <span className="font-semibold text-neutral-900 block leading-snug">{task.title}</span>
+                        <span className="text-sm text-neutral-500">{task.description}</span>
                       </div>
                       <Badge variant={task.priority} size="sm">
                         {task.priority}
