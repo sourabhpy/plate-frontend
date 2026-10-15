@@ -1355,10 +1355,10 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                                         >
                                           <Paperclip className="w-4 h-4 text-neutral-500 flex-shrink-0 group-hover/file:text-blue-600 transition-colors" />
                                           <span className="line-clamp-1 font-medium">{msg.file_name || "Attachment"}</span>
-                                          <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded ml-2 flex items-center gap-1 shrink-0">
+                                          <div className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded ml-2 flex items-center gap-1 shrink-0">
                                             <Eye className="w-3 h-3" />
                                             <span>View</span>
-                                          </span>
+                                          </div>
                                         </button>
                                         {(msg.file_url || (msg as any).file) && (
                                           <a

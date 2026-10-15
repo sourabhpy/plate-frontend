@@ -49,13 +49,24 @@ export function BackStackProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Ensure initial history state is stamped with plate backstack info
-    const currentState = window.history.state;
-    if (!currentState || currentState.plateApp !== true) {
-      window.history.replaceState(
-        { plateApp: true, plateType: "tab", tab: "board", index: 0 },
-        ""
-      );
+    // Ensure initial history state is stamped with plate backstack info without overwriting router state
+    try {
+      const currentState = window.history.state;
+      if (!currentState || currentState.plateApp !== true) {
+        window.history.replaceState(
+          {
+            ...(currentState && typeof currentState === "object" ? currentState : {}),
+            plateApp: true,
+            plateType: "tab",
+            tab: "board",
+            index: 0,
+          },
+          "",
+          window.location.href
+        );
+      }
+    } catch (err) {
+      console.warn("Backstack init replaceState skipped:", err);
     }
 
     const handlePopState = (e: PopStateEvent) => {
@@ -116,15 +127,22 @@ export function BackStackProvider({ children }: { children: React.ReactNode }) {
       if (history[history.length - 1] !== newTab) {
         history.push(newTab);
         if (typeof window !== "undefined") {
-          window.history.pushState(
-            {
-              plateApp: true,
-              plateType: "tab",
-              tab: newTab,
-              depth: history.length,
-            },
-            ""
-          );
+          try {
+            const currentState = window.history.state;
+            window.history.pushState(
+              {
+                ...(currentState && typeof currentState === "object" ? currentState : {}),
+                plateApp: true,
+                plateType: "tab",
+                tab: newTab,
+                depth: history.length,
+              },
+              "",
+              window.location.href
+            );
+          } catch (err) {
+            console.warn("Backstack tab pushState skipped:", err);
+          }
         }
       }
 
@@ -144,15 +162,22 @@ export function BackStackProvider({ children }: { children: React.ReactNode }) {
       overlaysRef.current.push(entry);
 
       // Push history state for this overlay so browser/gesture back catches it
-      window.history.pushState(
-        {
-          plateApp: true,
-          plateType: "overlay",
-          overlayId: id,
-          depth: overlaysRef.current.length,
-        },
-        ""
-      );
+      try {
+        const currentState = window.history.state;
+        window.history.pushState(
+          {
+            ...(currentState && typeof currentState === "object" ? currentState : {}),
+            plateApp: true,
+            plateType: "overlay",
+            overlayId: id,
+            depth: overlaysRef.current.length,
+          },
+          "",
+          window.location.href
+        );
+      } catch (err) {
+        console.warn("Backstack overlay pushState skipped:", err);
+      }
       updateStackDepth();
 
       // Return cleanup function when overlay closes
@@ -163,10 +188,23 @@ export function BackStackProvider({ children }: { children: React.ReactNode }) {
           updateStackDepth();
 
           // If the overlay was closed via UI (not via browser back popstate),
-          // roll back the browser history by 1 to keep history stack in sync
+          // only roll back if current history state is strictly this overlay!
+          // This prevents ever navigating backwards out of the application to browser tab home!
           if (!isPopstateHandlingRef.current) {
-            isProgrammaticBackRef.current = true;
-            window.history.back();
+            try {
+              if (
+                typeof window !== "undefined" &&
+                window.history.state &&
+                window.history.state.plateApp === true &&
+                window.history.state.plateType === "overlay" &&
+                window.history.state.overlayId === id
+              ) {
+                isProgrammaticBackRef.current = true;
+                window.history.back();
+              }
+            } catch (err) {
+              console.warn("Backstack overlay history rollback skipped:", err);
+            }
           }
         }
       };

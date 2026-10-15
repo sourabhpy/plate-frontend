@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion } from "motion/react";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import { PlateBrand } from "@/components/ui/PlateBrand";
+import { useBackStackOverlay } from "@/lib/back-stack";
 import {
   Sparkles,
   ArrowRight,
@@ -14,7 +15,153 @@ import {
   FileText,
   Kanban,
   BrainCircuit,
+  X,
 } from "lucide-react";
+
+interface AuthFormProps {
+  isRegister: boolean;
+  setIsRegister: (val: boolean) => void;
+  email: string;
+  setEmail: (val: string) => void;
+  password: string;
+  setPassword: (val: string) => void;
+  name: string;
+  setName: (val: string) => void;
+  workspaceName: string;
+  setWorkspaceName: (val: string) => void;
+  error: string | null;
+  setError: (val: string | null) => void;
+  isLoading: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+  onDemoLogin: (email: string) => void;
+}
+
+const AuthForm: React.FC<AuthFormProps> = ({
+  isRegister,
+  setIsRegister,
+  email,
+  setEmail,
+  password,
+  setPassword,
+  name,
+  setName,
+  workspaceName,
+  setWorkspaceName,
+  error,
+  setError,
+  isLoading,
+  onSubmit,
+  onDemoLogin,
+}) => {
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Brand Header */}
+      <div className="flex flex-col gap-2 text-center items-center">
+        <PlateBrand size="xl" />
+        <p className="text-sm text-neutral-500 font-medium">
+          Sign in or register to access your workspace
+        </p>
+      </div>
+
+      {/* Quick Demo Logins */}
+      <div className="p-4 rounded-2xl bg-neutral-100 border border-neutral-200 shadow-[0px_0px_20px_rgba(0,0,0,0.04)] flex flex-col gap-2.5">
+        <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+          Quick Demo Logins
+        </span>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => onDemoLogin("alex@coolcomp.com")}
+            className="px-3 py-2 rounded-xl bg-white hover:bg-neutral-100 text-sm text-neutral-800 font-medium text-left truncate transition-colors shadow-xs cursor-pointer"
+          >
+            Alex (AI Engineer)
+          </button>
+          <button
+            type="button"
+            onClick={() => onDemoLogin("elena@coolcomp.com")}
+            className="px-3 py-2 rounded-xl bg-white hover:bg-neutral-100 text-sm text-neutral-800 font-medium text-left truncate transition-colors shadow-xs cursor-pointer"
+          >
+            Elena (Designer)
+          </button>
+        </div>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        {error && (
+          <div className="p-3.5 rounded-xl bg-red-50 text-sm text-red-700 shadow-[0px_0px_20px_rgba(239,68,68,0.08)]">
+            {error}
+          </div>
+        )}
+
+        {isRegister && (
+          <>
+            <Input
+              label="Full Name"
+              placeholder="Sarah Connor"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <Input
+              label="Workspace Name"
+              placeholder="Coolcomp Robotics"
+              value={workspaceName}
+              onChange={(e) => setWorkspaceName(e.target.value)}
+            />
+          </>
+        )}
+
+        <Input
+          label="Work Email"
+          type="email"
+          placeholder="alex@coolcomp.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <Input
+          label="Password"
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+
+        <Button type="submit" size="md" isLoading={isLoading} className="w-full mt-2">
+          <span className="line-clamp-1 text-start">
+            {isRegister ? (
+              "Create Account & Workspace"
+            ) : (
+              <>
+                Sign In to <strong className="font-bold">plate</strong>
+              </>
+            )}
+          </span>
+          <ArrowRight className="w-4 h-4 ml-1 flex-shrink-0" />
+        </Button>
+      </form>
+
+      {/* Toggle */}
+      <div className="text-center pt-2 border-t border-neutral-100">
+        <button
+          type="button"
+          onClick={() => {
+            setIsRegister(!isRegister);
+            setError(null);
+          }}
+          className="text-sm text-neutral-600 hover:text-neutral-900 font-medium transition-colors cursor-pointer"
+        >
+          {isRegister
+            ? "Already have an account? Sign in"
+            : "Don't have an account? Create one"}
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const AuthView: React.FC = () => {
   const { login, register } = useAuth();
@@ -25,6 +172,29 @@ export const AuthView: React.FC = () => {
   const [workspaceName, setWorkspaceName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+
+  // Register mobile bottom sheet on the safe back stack
+  useBackStackOverlay(isBottomSheetOpen, () => setIsBottomSheetOpen(false), "login-sheet");
+
+  // Lock body scroll when bottom sheet is open on mobile
+  useEffect(() => {
+    if (isBottomSheetOpen) {
+      document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          setIsBottomSheetOpen(false);
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = "";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [isBottomSheetOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +207,7 @@ export const AuthView: React.FC = () => {
       } else {
         await login(email, password);
       }
+      setIsBottomSheetOpen(false);
     } catch (err: any) {
       setError(err.message || "Authentication failed");
     } finally {
@@ -49,6 +220,7 @@ export const AuthView: React.FC = () => {
     setIsLoading(true);
     try {
       await login(demoEmail, "Plate123!");
+      setIsBottomSheetOpen(false);
     } catch (err: any) {
       setError(err.message || "Demo login failed");
     } finally {
@@ -58,7 +230,7 @@ export const AuthView: React.FC = () => {
 
   return (
     <AuroraBackground className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-12">
-      <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16 py-8">
+      <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16 py-6 sm:py-8">
         {/* Left: Hero with Big Text */}
         <motion.div
           initial={{ opacity: 0.0, y: 30 }}
@@ -68,7 +240,7 @@ export const AuthView: React.FC = () => {
             duration: 0.8,
             ease: "easeInOut",
           }}
-          className="flex-1 flex flex-col gap-6 text-left max-w-2xl"
+          className="flex-1 flex flex-col gap-6 text-left max-w-2xl w-full"
         >
           {/* Eyebrow badge */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 backdrop-blur-md shadow-[0px_0px_20px_rgba(0,0,0,0.06)] w-fit text-sm font-semibold text-neutral-800">
@@ -77,14 +249,25 @@ export const AuthView: React.FC = () => {
           </div>
 
           {/* Big Hero Headline */}
-          <h1 className="tracking-tight text-neutral-950 text-2xl sm:text-4xl lg:text-4xl leading-[1.08]">Power up your Workflows</h1>
-          <strong className="font-bold text-4xl sm:text-6xl lg:text-7xl">with 🍽️ plate.</strong>
-
+          <h1 className="tracking-tight text-neutral-950 text-3xl sm:text-4xl lg:text-5xl leading-[1.08]">Power up your Workflows</h1>
+          <strong className="font-bold text-5xl sm:text-6xl lg:text-7xl -mt-2">with 🍽️ plate.</strong>
 
           {/* Subheading */}
-          <p className="text-lg sm:text-xl lg:text-2xl text-neutral-600 font-normal leading-relaxed">
+          <p className="text-base sm:text-xl lg:text-2xl text-neutral-600 font-normal leading-relaxed">
             Turn ambient audio notes, complex team documents, and conversations into structured kanban tasks and collective team memory.
           </p>
+
+          {/* Mobile CTA: Get Started Button (Visible only on mobile devices) */}
+          <div className="lg:hidden w-full pt-1">
+            <button
+              type="button"
+              onClick={() => setIsBottomSheetOpen(true)}
+              className="w-full h-14 px-6 rounded-2xl bg-neutral-950 text-white font-bold text-base shadow-[0px_8px_30px_rgba(0,0,0,0.22)] hover:bg-neutral-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+            >
+              <span>Get Started</span>
+              <ArrowRight className="w-5 h-5 flex-shrink-0" />
+            </button>
+          </div>
 
           {/* Feature Highlights Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
@@ -130,7 +313,7 @@ export const AuthView: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Right: Login / Signup Form */}
+        {/* Right: Desktop Login / Signup Form (Hidden on mobile devices) */}
         <motion.div
           initial={{ opacity: 0.0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -139,116 +322,96 @@ export const AuthView: React.FC = () => {
             duration: 0.8,
             ease: "easeInOut",
           }}
-          className="w-full max-w-md lg:w-[440px] flex-shrink-0"
+          className="hidden lg:block w-full max-w-md lg:w-[440px] flex-shrink-0"
         >
-          <div className="w-full bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0px_0px_30px_rgba(0,0,0,0.1)] p-6 sm:p-8 flex flex-col gap-6">
-            {/* Brand Header */}
-            <div className="flex flex-col gap-2 text-center items-center">
-              <PlateBrand size="xl" />
-              <p className="text-sm text-neutral-500 font-medium">
-                Sign in or register to access your workspace
-              </p>
-            </div>
-
-            {/* Quick Demo Logins */}
-            <div className="p-4 rounded-2xl bg-neutral-100 border border-neutral-200 shadow-[0px_0px_20px_rgba(0,0,0,0.04)] flex flex-col gap-2.5">
-              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
-                Quick Demo Logins
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleDemoLogin("alex@coolcomp.com")}
-                  className="px-3 py-2 rounded-xl bg-white hover:bg-neutral-100 text-sm text-neutral-800 font-medium text-left truncate transition-colors shadow-xs"
-                >
-                  Alex (AI Engineer)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDemoLogin("elena@coolcomp.com")}
-                  className="px-3 py-2 rounded-xl bg-white hover:bg-neutral-100 text-sm text-neutral-800 font-medium text-left truncate transition-colors shadow-xs"
-                >
-                  Elena (Designer)
-                </button>
-              </div>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {error && (
-                <div className="p-3.5 rounded-xl bg-red-50 text-sm text-red-700 shadow-[0px_0px_20px_rgba(239,68,68,0.08)]">
-                  {error}
-                </div>
-              )}
-
-              {isRegister && (
-                <>
-                  <Input
-                    label="Full Name"
-                    placeholder="Sarah Connor"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                  <Input
-                    label="Workspace Name"
-                    placeholder="Coolcomp Robotics"
-                    value={workspaceName}
-                    onChange={(e) => setWorkspaceName(e.target.value)}
-                  />
-                </>
-              )}
-
-              <Input
-                label="Work Email"
-                type="email"
-                placeholder="alex@coolcomp.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-
-              <Input
-                label="Password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-
-              <Button type="submit" size="md" isLoading={isLoading} className="w-full mt-2">
-                <span className="line-clamp-1 text-start">
-                  {isRegister ? (
-                    "Create Account & Workspace"
-                  ) : (
-                    <>
-                      Sign In to <strong className="font-bold">plate</strong>
-                    </>
-                  )}
-                </span>
-                <ArrowRight className="w-4 h-4 ml-1 flex-shrink-0" />
-              </Button>
-            </form>
-
-            {/* Toggle */}
-            <div className="text-center pt-2 border-t border-neutral-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRegister(!isRegister);
-                  setError(null);
-                }}
-                className="text-sm text-neutral-600 hover:text-neutral-900 font-medium transition-colors"
-              >
-                {isRegister
-                  ? "Already have an account? Sign in"
-                  : "Don't have an account? Create one"}
-              </button>
-            </div>
+          <div className="w-full bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0px_0px_30px_rgba(0,0,0,0.1)] p-6 sm:p-8">
+            <AuthForm
+              isRegister={isRegister}
+              setIsRegister={setIsRegister}
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              name={name}
+              setName={setName}
+              workspaceName={workspaceName}
+              setWorkspaceName={setWorkspaceName}
+              error={error}
+              setError={setError}
+              isLoading={isLoading}
+              onSubmit={handleSubmit}
+              onDemoLogin={handleDemoLogin}
+            />
           </div>
         </motion.div>
       </div>
-    </AuroraBackground >
+
+      {/* Mobile Bottom Sheet for Login / Signup Form */}
+      <AnimatePresence>
+        {isBottomSheetOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+              onClick={() => setIsBottomSheetOpen(false)}
+              aria-hidden="true"
+            />
+
+            {/* Bottom Sheet Drawer */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="relative z-10 w-full bg-white rounded-t-[28px] shadow-[0px_-10px_40px_rgba(0,0,0,0.25)] max-h-[90vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Drag Pill Handle */}
+              <div className="w-12 h-1.5 bg-neutral-200 rounded-full mx-auto mt-3 mb-1 shrink-0" />
+
+              {/* Close Button Header */}
+              <div className="flex items-center justify-between px-6 py-2 border-b border-neutral-100 shrink-0">
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                  Authentication
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsBottomSheetOpen(false)}
+                  className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 flex items-center justify-center transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4 flex-shrink-0" />
+                </button>
+              </div>
+
+              {/* Scrollable Form Body */}
+              <div className="p-6 overflow-y-auto flex-1">
+                <AuthForm
+                  isRegister={isRegister}
+                  setIsRegister={setIsRegister}
+                  email={email}
+                  setEmail={setEmail}
+                  password={password}
+                  setPassword={setPassword}
+                  name={name}
+                  setName={setName}
+                  workspaceName={workspaceName}
+                  setWorkspaceName={setWorkspaceName}
+                  error={error}
+                  setError={setError}
+                  isLoading={isLoading}
+                  onSubmit={handleSubmit}
+                  onDemoLogin={handleDemoLogin}
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </AuroraBackground>
   );
 };

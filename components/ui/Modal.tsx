@@ -65,10 +65,14 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         className="fixed inset-0"
-        onClick={onClose}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
         aria-hidden="true"
       />
       <div
+        onClick={(e) => e.stopPropagation()}
         className={clsx(
           "relative w-full bg-white rounded-t-2xl sm:rounded-2xl shadow-[0px_0px_30px_rgba(0,0,0,0.15)] overflow-hidden flex flex-col max-h-[92vh] z-10 animate-in zoom-in-95 duration-150",
           maxWidths[maxWidth]
