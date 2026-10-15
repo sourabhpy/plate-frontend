@@ -30,6 +30,7 @@ import {
   Menu,
   Trash2,
   Ban,
+  AtSign,
 } from "lucide-react";
 import clsx from "clsx";
 import { VoiceNotePlayer } from "./VoiceNotePlayer";
@@ -78,6 +79,178 @@ export interface ConversationItem {
   };
 }
 
+function escapeRegex(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function renderMessageContent(
+  content: string,
+  members: WorkspaceMember[],
+  currentUserId?: string
+) {
+  if (!content) return null;
+  if (!content.includes("@")) {
+    return content;
+  }
+
+  const memberMap = new Map<string, WorkspaceMember>();
+  const idents: string[] = [];
+
+  for (const m of members) {
+    const candidateStrings = [
+      m.user.username,
+      m.user.name,
+      m.user.email,
+      m.user.email?.split("@")[0],
+    ].filter(Boolean) as string[];
+
+    for (const s of candidateStrings) {
+      const lower = s.trim().toLowerCase();
+      if (lower && !memberMap.has(lower)) {
+        memberMap.set(lower, m);
+        idents.push(s.trim());
+      }
+    }
+  }
+
+  idents.sort((a, b) => b.length - a.length);
+
+  const patternSource =
+    idents.length > 0
+      ? `(?<=^|\\s)@(${idents.map(escapeRegex).join("|")}|[a-zA-Z0-9_.-]+)(?=$|[^\\w])`
+      : `(?<=^|\\s)@([a-zA-Z0-9_.-]+)(?=$|[^\\w])`;
+
+  const regex = new RegExp(patternSource, "gi");
+
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(content)) !== null) {
+    const matchStart = match.index;
+    const matchedTag = match[1];
+
+    if (matchStart > lastIndex) {
+      nodes.push(content.substring(lastIndex, matchStart));
+    }
+
+    const matchedMember = memberMap.get(matchedTag.toLowerCase());
+    const isMe =
+      matchedMember &&
+      (matchedMember.user.id === currentUserId ||
+        (matchedMember.user as any).user_id === currentUserId);
+    const displayLabel = matchedMember
+      ? matchedMember.user.name || matchedMember.user.username || matchedTag
+      : matchedTag;
+
+    nodes.push(
+      <span
+        key={`mention-${matchStart}-${matchedTag}`}
+        className={clsx(
+          "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-xs font-semibold mx-0.5 align-baseline select-none transition-colors",
+          isMe
+            ? "bg-blue-600 text-white shadow-xs"
+            : "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/60"
+        )}
+        title={
+          matchedMember
+            ? `${matchedMember.user.name} (${matchedMember.user.email})`
+            : `@${displayLabel}`
+        }
+      >
+        <span className="opacity-80">@</span>
+        <span>{displayLabel}</span>
+      </span>
+    );
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    nodes.push(content.substring(lastIndex));
+  }
+
+  return <>{nodes}</>;
+}
+
+interface MentionSuggestionsProps {
+  isOpen: boolean;
+  query: string;
+  members: WorkspaceMember[];
+  selectedIndex: number;
+  onSelect: (m: WorkspaceMember) => void;
+}
+
+const MentionSuggestions: React.FC<MentionSuggestionsProps> = ({
+  isOpen,
+  query,
+  members,
+  selectedIndex,
+  onSelect,
+}) => {
+  if (!isOpen) return null;
+
+  if (members.length === 0) {
+    return (
+      <div className="absolute bottom-full left-2 sm:left-4 mb-2 w-64 bg-white rounded-xl shadow-[0px_10px_38px_rgba(0,0,0,0.18),0px_10px_20px_rgba(0,0,0,0.06)] border border-neutral-200 z-50 p-3 text-xs text-neutral-400 text-center animate-in fade-in slide-in-from-bottom-2">
+        No members matching &ldquo;{query}&rdquo;
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute bottom-full left-2 sm:left-4 mb-2 w-72 sm:w-80 max-h-60 overflow-y-auto bg-white rounded-xl shadow-[0px_10px_38px_rgba(0,0,0,0.18),0px_10px_20px_rgba(0,0,0,0.06)] border border-neutral-200 z-50 p-1.5 animate-in fade-in slide-in-from-bottom-2">
+      <div className="px-2.5 py-1 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider flex items-center justify-between border-b border-neutral-100 pb-1 mb-1">
+        <span className="flex items-center gap-1">
+          <AtSign className="w-3 h-3 text-blue-600" />
+          <span>Mention Team Member</span>
+        </span>
+        <span className="text-[10px] text-neutral-400 font-normal">↑↓ to navigate &bull; ↵ to select</span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        {members.map((m, idx) => (
+          <button
+            key={m.id}
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onSelect(m);
+            }}
+            className={clsx(
+              "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer",
+              idx === selectedIndex
+                ? "bg-blue-50 text-blue-900 font-medium"
+                : "hover:bg-neutral-100 text-neutral-800"
+            )}
+          >
+            <Avatar
+              name={m.user.name || m.user.email}
+              src={m.user.avatar_url || m.user.avatar}
+              size="sm"
+              className="shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-semibold truncate text-neutral-900">
+                  {m.user.name || m.user.username || m.user.email.split("@")[0]}
+                </span>
+                {m.role === "admin" && (
+                  <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-600 border border-neutral-200 shrink-0">
+                    Admin
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-neutral-400 truncate block">
+                @{m.user.username || m.user.email.split("@")[0]}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 interface ChatViewProps {
   onExtractTaskFromMessage?: (message: MessageItem) => void;
 }
@@ -97,10 +270,211 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MessageItem[]>([]);
 
+  // Mentions in main composer
+  const mainInputRef = useRef<HTMLInputElement>(null);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [isMentionOpen, setIsMentionOpen] = useState(false);
+  const [mentionIndex, setMentionIndex] = useState(0);
+
   // Threads
   const [activeThreadParent, setActiveThreadParent] = useState<MessageItem | null>(null);
   const [threadReplies, setThreadReplies] = useState<MessageItem[]>([]);
   const [threadInput, setThreadInput] = useState("");
+
+  // Mentions in thread composer
+  const threadInputRef = useRef<HTMLInputElement>(null);
+  const [threadMentionQuery, setThreadMentionQuery] = useState("");
+  const [isThreadMentionOpen, setIsThreadMentionOpen] = useState(false);
+  const [threadMentionIndex, setThreadMentionIndex] = useState(0);
+
+  // Filtered members for mentions
+  const filteredMembers = useMemo(() => {
+    if (!isMentionOpen) return [];
+    const q = mentionQuery.toLowerCase().trim();
+    if (!q) return members;
+    return members.filter((m) => {
+      const nameMatch = m.user.name?.toLowerCase().includes(q);
+      const usernameMatch = m.user.username?.toLowerCase().includes(q);
+      const emailMatch = m.user.email?.toLowerCase().includes(q);
+      return nameMatch || usernameMatch || emailMatch;
+    });
+  }, [isMentionOpen, mentionQuery, members]);
+
+  const filteredThreadMembers = useMemo(() => {
+    if (!isThreadMentionOpen) return [];
+    const q = threadMentionQuery.toLowerCase().trim();
+    if (!q) return members;
+    return members.filter((m) => {
+      const nameMatch = m.user.name?.toLowerCase().includes(q);
+      const usernameMatch = m.user.username?.toLowerCase().includes(q);
+      const emailMatch = m.user.email?.toLowerCase().includes(q);
+      return nameMatch || usernameMatch || emailMatch;
+    });
+  }, [isThreadMentionOpen, threadMentionQuery, members]);
+
+  const insertMention = useCallback(
+    (member: WorkspaceMember) => {
+      const inputEl = mainInputRef.current;
+      if (!inputEl) return;
+      const cursor = inputEl.selectionStart || inputText.length;
+      const beforeCursor = inputText.slice(0, cursor);
+      const afterCursor = inputText.slice(cursor);
+
+      const atIndex = beforeCursor.lastIndexOf("@");
+      if (atIndex === -1) return;
+
+      const handle =
+        member.user.username ||
+        member.user.name ||
+        member.user.email.split("@")[0];
+      const mentionText = `@${handle} `;
+
+      const newText = beforeCursor.slice(0, atIndex) + mentionText + afterCursor;
+      setInputText(newText);
+      setIsMentionOpen(false);
+
+      setTimeout(() => {
+        if (mainInputRef.current) {
+          mainInputRef.current.focus();
+          const newCursor = atIndex + mentionText.length;
+          mainInputRef.current.setSelectionRange(newCursor, newCursor);
+        }
+      }, 10);
+    },
+    [inputText]
+  );
+
+  const insertThreadMention = useCallback(
+    (member: WorkspaceMember) => {
+      const inputEl = threadInputRef.current;
+      if (!inputEl) return;
+      const cursor = inputEl.selectionStart || threadInput.length;
+      const beforeCursor = threadInput.slice(0, cursor);
+      const afterCursor = threadInput.slice(cursor);
+
+      const atIndex = beforeCursor.lastIndexOf("@");
+      if (atIndex === -1) return;
+
+      const handle =
+        member.user.username ||
+        member.user.name ||
+        member.user.email.split("@")[0];
+      const mentionText = `@${handle} `;
+
+      const newText = beforeCursor.slice(0, atIndex) + mentionText + afterCursor;
+      setThreadInput(newText);
+      setIsThreadMentionOpen(false);
+
+      setTimeout(() => {
+        if (threadInputRef.current) {
+          threadInputRef.current.focus();
+          const newCursor = atIndex + mentionText.length;
+          threadInputRef.current.setSelectionRange(newCursor, newCursor);
+        }
+      }, 10);
+    },
+    [threadInput]
+  );
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputText(val);
+
+    const cursor = e.target.selectionStart || val.length;
+    const beforeCursor = val.slice(0, cursor);
+    const match = beforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_.-]*)$/);
+
+    if (match) {
+      setMentionQuery(match[1]);
+      setMentionIndex(0);
+      setIsMentionOpen(true);
+    } else {
+      setIsMentionOpen(false);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isMentionOpen && filteredMembers.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev + 1) % filteredMembers.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIndex((prev) => (prev - 1 + filteredMembers.length) % filteredMembers.length);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        insertMention(filteredMembers[mentionIndex] || filteredMembers[0]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setIsMentionOpen(false);
+        return;
+      }
+    }
+  };
+
+  const handleThreadInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setThreadInput(val);
+
+    const cursor = e.target.selectionStart || val.length;
+    const beforeCursor = val.slice(0, cursor);
+    const match = beforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_.-]*)$/);
+
+    if (match) {
+      setThreadMentionQuery(match[1]);
+      setThreadMentionIndex(0);
+      setIsThreadMentionOpen(true);
+    } else {
+      setIsThreadMentionOpen(false);
+    }
+  };
+
+  const handleThreadKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isThreadMentionOpen && filteredThreadMembers.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setThreadMentionIndex((prev) => (prev + 1) % filteredThreadMembers.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setThreadMentionIndex(
+          (prev) => (prev - 1 + filteredThreadMembers.length) % filteredThreadMembers.length
+        );
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        insertThreadMention(filteredThreadMembers[threadMentionIndex] || filteredThreadMembers[0]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setIsThreadMentionOpen(false);
+        return;
+      }
+    }
+  };
+
+  // Click outside to dismiss mention popovers
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      if (mainInputRef.current && !mainInputRef.current.contains(e.target as Node)) {
+        setIsMentionOpen(false);
+      }
+      if (threadInputRef.current && !threadInputRef.current.contains(e.target as Node)) {
+        setIsThreadMentionOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleDocumentClick);
+    return () => document.removeEventListener("mousedown", handleDocumentClick);
+  }, []);
 
   // Mobile Message Action Bottom Sheet
   const [activeMobileActionMessage, setActiveMobileActionMessage] = useState<MessageItem | null>(null);
@@ -336,6 +710,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
 
     const content = inputText.trim();
     setInputText("");
+    setIsMentionOpen(false);
     setIsSending(true);
 
     // Optimistic message
@@ -572,6 +947,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
       );
       setThreadReplies((prev) => [...prev, reply]);
       setThreadInput("");
+      setIsThreadMentionOpen(false);
       // Increment reply count on parent
       setMessages((prev) =>
         prev.map((m) =>
@@ -918,7 +1294,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                                   <div className="flex items-center justify-start gap-2 flex-wrap">
                                     {msg.message_type === "text" && (
                                       <p className="text-sm text-neutral-800 leading-relaxed break-words whitespace-pre-wrap">
-                                        {msg.content}
+                                        {renderMessageContent(msg.content, members, user?.id)}
                                         {msg.is_edited && (
                                           <span className="text-xs text-neutral-400 italic ml-1.5 select-none">
                                             (edited)
@@ -1033,7 +1409,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
             </div>
 
             {/* Composer */}
-            <div className="p-4 border-t border-neutral-200 bg-white">
+            <div className="relative p-4 border-t border-neutral-200 bg-white">
+              <MentionSuggestions
+                isOpen={isMentionOpen}
+                query={mentionQuery}
+                members={filteredMembers}
+                selectedIndex={mentionIndex}
+                onSelect={insertMention}
+              />
               {isRecording ? (
                 <div className="flex items-center justify-between p-3.5 rounded-xl bg-red-50 text-red-700 shadow-[0px_0px_25px_rgba(239,68,68,0.1)]">
                   <div className="flex items-center gap-2 text-sm font-semibold">
@@ -1065,10 +1448,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                   </button>
 
                   <input
+                    ref={mainInputRef}
                     type="text"
                     value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder={`Message ${activeConversation.display_name}...`}
+                    onChange={handleInputChange}
+                    onKeyDown={handleInputKeyDown}
+                    placeholder={`Message ${activeConversation.display_name}... (use @ to tag)`}
                     className="flex-1 text-sm sm:text-base text-neutral-900 border-none p-1 focus:outline-none placeholder:text-neutral-400"
                   />
 
@@ -1163,8 +1548,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                   <span>This message was deleted</span>
                 </p>
               ) : (
-                <p className="text-sm text-neutral-800 leading-relaxed font-normal">
-                  {activeThreadParent.content}
+                <p className="text-sm text-neutral-800 leading-relaxed font-normal whitespace-pre-wrap break-words">
+                  {renderMessageContent(activeThreadParent.content, members, user?.id)}
                 </p>
               )}
             </div>
@@ -1225,7 +1610,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                             <span>This message was deleted</span>
                           </p>
                         ) : (
-                          <p className="text-neutral-700 text-sm leading-relaxed">{r.content}</p>
+                          <p className="text-neutral-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                            {renderMessageContent(r.content, members, user?.id)}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1235,18 +1622,29 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
             </div>
 
             {/* Thread Reply Composer */}
-            <form onSubmit={handleSendThreadReply} className="p-3 sm:p-4 border-t border-neutral-200 bg-white flex items-center gap-2 shrink-0 pb-safe">
-              <input
-                type="text"
-                value={threadInput}
-                onChange={(e) => setThreadInput(e.target.value)}
-                placeholder="Reply in thread..."
-                className="flex-1 h-10 px-3.5 text-base sm:text-sm bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:bg-white focus:border-neutral-900 transition-colors"
+            <div className="relative border-t border-neutral-200 bg-white shrink-0">
+              <MentionSuggestions
+                isOpen={isThreadMentionOpen}
+                query={threadMentionQuery}
+                members={filteredThreadMembers}
+                selectedIndex={threadMentionIndex}
+                onSelect={insertThreadMention}
               />
-              <Button size="sm" type="submit" disabled={!threadInput.trim()} className="h-10 px-4">
-                <span className="line-clamp-1 text-start">Reply</span>
-              </Button>
-            </form>
+              <form onSubmit={handleSendThreadReply} className="p-3 sm:p-4 flex items-center gap-2 pb-safe">
+                <input
+                  ref={threadInputRef}
+                  type="text"
+                  value={threadInput}
+                  onChange={handleThreadInputChange}
+                  onKeyDown={handleThreadKeyDown}
+                  placeholder="Reply in thread... (use @ to tag)"
+                  className="flex-1 h-10 px-3.5 text-base sm:text-sm bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:bg-white focus:border-neutral-900 transition-colors"
+                />
+                <Button size="sm" type="submit" disabled={!threadInput.trim()} className="h-10 px-4">
+                  <span className="line-clamp-1 text-start">Reply</span>
+                </Button>
+              </form>
+            </div>
           </div>
         </>
       )}

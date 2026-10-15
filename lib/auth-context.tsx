@@ -7,6 +7,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  username?: string;
   avatar?: string | null;
   avatar_url?: string | null;
   date_joined?: string;

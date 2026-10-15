@@ -13,6 +13,7 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCheck,
+  AtSign,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -141,7 +142,14 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="font-semibold text-neutral-900 leading-snug">{n.title}</span>
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  {n.notification_type === "mention" && (
+                    <span className="p-1 rounded-md bg-blue-100 text-blue-600 shrink-0">
+                      <AtSign className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                  <span className="font-semibold text-neutral-900 leading-snug line-clamp-2">{n.title}</span>
+                </div>
                 {!n.is_read && (
                   <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1" />
                 )}
