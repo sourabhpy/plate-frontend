@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { useBackStackOverlay } from "@/lib/back-stack";
 import {
   Hash,
   Lock,
@@ -139,6 +140,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
   const [newChannelTopic, setNewChannelTopic] = useState("");
   const [selectedDmMemberId, setSelectedDmMemberId] = useState<string>("");
   const [isMobileChannelsOpen, setIsMobileChannelsOpen] = useState(false);
+
+  // Hook ChatView overlays into back stack
+  useBackStackOverlay(Boolean(activeThreadParent), () => setActiveThreadParent(null), "chat-thread");
+  useBackStackOverlay(Boolean(activeMobileActionMessage), () => setActiveMobileActionMessage(null), "chat-action-menu");
+  useBackStackOverlay(isMobileChannelsOpen, () => setIsMobileChannelsOpen(false), "chat-channels");
 
   // --- STRICT INCREMENTAL 2-SECOND POLLING ENGINE ---
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { BackStackProvider, useBackStack } from "@/lib/back-stack";
 import { Header } from "@/components/layout/Header";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { MyTasksView } from "@/components/tasks/MyTasksView";
@@ -16,9 +17,7 @@ import { PlateBrand } from "@/components/ui/PlateBrand";
 
 function PlateApp() {
   const { user, isLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<
-    "board" | "communications" | "my-tasks" | "memory" | "documents"
-  >("board");
+  const { activeTab, setActiveTab } = useBackStack();
 
   // Modals state
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
@@ -152,7 +151,9 @@ function PlateApp() {
 export default function Home() {
   return (
     <AuthProvider>
-      <PlateApp />
+      <BackStackProvider>
+        <PlateApp />
+      </BackStackProvider>
     </AuthProvider>
   );
 }

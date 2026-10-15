@@ -8,6 +8,7 @@ import { PlateBrand } from "@/components/ui/PlateBrand";
 import { AddWorkspaceModal } from "@/components/layout/AddWorkspaceModal";
 import { AddUserModal } from "@/components/layout/AddUserModal";
 import { ProfileModal } from "@/components/layout/ProfileModal";
+import { useBackStackOverlay } from "@/lib/back-stack";
 import {
   Kanban,
   MessageSquare,
@@ -50,6 +51,11 @@ export const Header: React.FC<HeaderProps> = ({
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // Hook menus and drawer into back stack
+  useBackStackOverlay(isMobileDrawerOpen, () => setIsMobileDrawerOpen(false), "mobile-drawer");
+  useBackStackOverlay(showWorkspaceMenu, () => setShowWorkspaceMenu(false), "workspace-menu");
+  useBackStackOverlay(showUserMenu, () => setShowUserMenu(false), "user-menu");
 
   // Modals
   const [isAddWorkspaceOpen, setIsAddWorkspaceOpen] = useState(false);

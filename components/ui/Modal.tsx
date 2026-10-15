@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import clsx from "clsx";
 import { X } from "lucide-react";
+import { useBackStackOverlay } from "@/lib/back-stack";
 
 interface ModalProps {
   isOpen: boolean;
@@ -21,6 +22,9 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   maxWidth = "lg",
 }) => {
+  // Automatically register this modal on the back stack
+  useBackStackOverlay(isOpen, onClose, "modal");
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {

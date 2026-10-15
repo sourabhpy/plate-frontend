@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { Search, X, ArrowLeft, ArrowRightIcon } from "lucide-react";
+import { useBackStackOverlay } from "@/lib/back-stack";
 import clsx from "clsx";
 
 interface FullscreenMobileSearchProps {
@@ -36,6 +37,8 @@ export const FullscreenMobileSearch: React.FC<FullscreenMobileSearchProps> = ({
   submitButtonText,
   resultCount,
 }) => {
+  useBackStackOverlay(isOpen, onClose, "mobile-search");
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {

@@ -101,7 +101,7 @@ export const TeamMemoryView: React.FC = () => {
   }));
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 max-w-5xl mx-auto w-full">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-neutral-200 gap-4">
         <div>
@@ -169,7 +169,7 @@ export const TeamMemoryView: React.FC = () => {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Ask about team decisions, postponed tasks, or member workload..."
-            className="w-full h-14 pl-12 pr-36 text-base bg-white focus:outline-none placeholder:text-neutral-400"
+            className="w-full h-14 pl-12 pr-36 text-base focus:outline-black rounded-2xl bg-white placeholder:text-neutral-400"
           />
           <Button
             size="sm"

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useBackStackOverlay } from "@/lib/back-stack";
 import { apiRequest } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import {
@@ -43,6 +44,8 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
   onSelectTask,
   onUnreadCountChange,
 }) => {
+  useBackStackOverlay(isOpen, onClose, "notification-drawer");
+
   const { activeWorkspace } = useAuth();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
