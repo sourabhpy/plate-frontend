@@ -376,7 +376,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
                   </div>
                 </div>
 
-                <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-full bg-neutral-200/60 text-neutral-700 flex-shrink-0">
+                <span className="text-xs font-inter font-semibold px-2 py-0.5 rounded-full bg-neutral-200/60 text-neutral-700 flex-shrink-0">
                   {memberTasks.length}
                 </span>
               </div>

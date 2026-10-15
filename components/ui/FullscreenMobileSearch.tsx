@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { Search, X, ArrowLeft } from "lucide-react";
+import { Search, X, ArrowLeft, ArrowRightIcon } from "lucide-react";
 import clsx from "clsx";
 
 interface FullscreenMobileSearchProps {
@@ -113,33 +113,14 @@ export const FullscreenMobileSearch: React.FC<FullscreenMobileSearchProps> = ({
             onClick={(e) => {
               if (onSubmit) onSubmit(e as any);
             }}
-            className="px-3 py-2 text-sm font-semibold text-blue-600 hover:text-blue-700 flex-shrink-0"
+            className="px-3 py-2 text-sm font-semibold text-black flex-shrink-0"
           >
-            <span className="line-clamp-1">{submitButtonText}</span>
+            <span className="line-clamp-1">
+              <ArrowRightIcon size={20} />
+            </span>
           </button>
         )}
       </div>
-
-      {/* Filter Chips Bar */}
-      {chips.length > 0 && (
-        <div className="px-4 py-2.5 border-b border-neutral-100 flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 bg-neutral-50/50">
-          {chips.map((chip) => (
-            <button
-              key={chip.id}
-              type="button"
-              onClick={chip.onClick}
-              className={clsx(
-                "px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0",
-                chip.active
-                  ? "bg-neutral-950 text-white shadow-xs"
-                  : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-100"
-              )}
-            >
-              <span className="line-clamp-1">{chip.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Results Header */}
       {resultCount !== undefined && (

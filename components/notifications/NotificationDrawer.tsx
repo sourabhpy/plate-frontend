@@ -144,7 +144,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                 )}
               </div>
               <p className="text-neutral-600 text-sm leading-relaxed">{n.message}</p>
-              <span className="text-xs text-neutral-400 font-mono mt-1">
+              <span className="text-xs text-neutral-400 font-inter mt-1">
                 {new Date(n.created_at).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",

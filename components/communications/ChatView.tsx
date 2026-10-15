@@ -701,7 +701,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
         <div className="p-3">
           <div className="flex items-center justify-between text-xs font-bold text-neutral-400 uppercase tracking-wider px-2 mb-1.5">
             <span>Channels</span>
-            <span className="text-xs font-mono">{channels.length}</span>
+            <span className="text-xs font-inter">{channels.length}</span>
           </div>
           <div className="flex flex-col gap-1">
             {channels.map((c) => (
@@ -764,7 +764,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
       </div>
 
       {/* Polling Health Indicator */}
-      <div className="p-3 border-t border-neutral-200 text-xs text-neutral-400 font-mono flex items-center justify-between bg-white">
+      <div className="p-3 border-t border-neutral-200 text-xs text-neutral-400 font-inter flex items-center justify-between bg-white">
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
           <span className="line-clamp-1">2s Sync Active</span>
@@ -828,7 +828,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
 
               {/* Polling Pulse Badge */}
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded">
+                <span className="text-[11px] font-inter text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded">
                   cursor #{latestMessageIdRef.current}
                 </span>
               </div>

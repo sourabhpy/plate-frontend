@@ -13,6 +13,7 @@ import {
   Kanban,
   RefreshCw,
   X,
+  ArrowRightIcon,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -106,7 +107,7 @@ export const TeamMemoryView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight text-neutral-950">Team Memory</h1>
-            <span className="text-xs font-mono uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="text-xs font-inter uppercase px-1.5 py-0.5 rounded-md font-bold bg-blue-500 text-white border">
               RAG + Authoritative DB
             </span>
           </div>
@@ -148,8 +149,8 @@ export const TeamMemoryView: React.FC = () => {
                 {question || "Ask about decisions, workload, tech stack..."}
               </span>
             </div>
-            <span className="text-xs font-bold text-blue-600 flex-shrink-0 ml-2">
-              Ask 🍽️ <strong>plate</strong>
+            <span className="text-xs font-bold text-black flex-shrink-0 ml-2">
+              <ArrowRightIcon size={20} />
             </span>
           </button>
         </div>
@@ -175,10 +176,10 @@ export const TeamMemoryView: React.FC = () => {
             type="submit"
             isLoading={isLoading}
             disabled={!question.trim()}
-            className="absolute right-3"
+            className="absolute bg-white text-black border-none hover:bg-white right-3"
           >
             <span className="line-clamp-1">
-              Ask 🍽️ <strong className="font-bold">plate</strong>
+              <ArrowRightIcon size={20} />
             </span>
           </Button>
         </form>
@@ -217,7 +218,7 @@ export const TeamMemoryView: React.FC = () => {
             <div className="flex items-center gap-2 text-sm font-bold text-neutral-900">
               <Sparkles className="w-4 h-4 text-blue-600 flex-shrink-0" />
               <span>
-                🍽️ <strong className="font-bold">plate</strong> Answer
+                <strong className="font-bold">plate</strong> Answer
               </span>
             </div>
             <div className="text-sm sm:text-base text-neutral-800 leading-relaxed whitespace-pre-wrap">
@@ -247,7 +248,7 @@ export const TeamMemoryView: React.FC = () => {
                       )}
                       <span className="font-semibold text-neutral-900 truncate">{c.title}</span>
                     </div>
-                    <span className="text-xs font-mono text-neutral-400 flex-shrink-0 ml-2">
+                    <span className="text-xs font-inter text-neutral-400 flex-shrink-0 ml-2">
                       score: {c.score}
                     </span>
                   </div>

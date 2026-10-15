@@ -144,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
                           <span className="line-clamp-1">{ws.name}</span>
                           <div className="flex items-center gap-1.5 shrink-0 ml-2">
                             {ws.my_role === "admin" && (
-                              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-semibold">
+                              <span className="text-[10px] uppercase font-inter px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-semibold">
                                 Admin
                               </span>
                             )}
@@ -207,9 +207,9 @@ export const Header: React.FC<HeaderProps> = ({
                             </div>
                             <span
                               className={clsx(
-                                "text-[10px] uppercase font-mono px-1.5 py-0.5 rounded font-semibold shrink-0",
+                                "text-[10px] uppercase font-inter px-1.5 py-0.5 rounded-md font-semibold shrink-0",
                                 member.role === "admin"
-                                  ? "bg-purple-50 text-purple-700 border border-purple-200/50"
+                                  ? "bg-neutral-900 text-white border border-neutral-900"
                                   : "bg-neutral-100 text-neutral-600"
                               )}
                             >
@@ -307,11 +307,11 @@ export const Header: React.FC<HeaderProps> = ({
                     <p className="text-sm font-semibold text-neutral-900 line-clamp-1">{user?.name}</p>
                     <p className="text-xs text-neutral-500 line-clamp-1">{user?.email}</p>
                     <div className="mt-1.5 flex items-center gap-1.5">
-                      <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-semibold">
+                      <span className="text-[10px] uppercase font-inter px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 font-semibold">
                         {activeMember?.role || activeWorkspace?.my_role || "Member"}
                       </span>
                       {isAdmin && (
-                        <span className="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded font-mono font-semibold">
+                        <span className="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded font-inter font-semibold">
                           Admin Privileges
                         </span>
                       )}
@@ -432,7 +432,7 @@ export const Header: React.FC<HeaderProps> = ({
                       {unreadCount}
                     </span>
                   ) : (
-                    <span className="text-xs text-neutral-400 font-mono flex-shrink-0">Caught up</span>
+                    <span className="text-xs text-neutral-400 font-inter flex-shrink-0">Caught up</span>
                   )}
                 </button>
               </div>
@@ -506,7 +506,7 @@ export const Header: React.FC<HeaderProps> = ({
                     >
                       <span className="line-clamp-1">{ws.name}</span>
                       {ws.my_role === "admin" && (
-                        <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 flex-shrink-0 ml-1">
+                        <span className="text-xs font-inter px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 flex-shrink-0 ml-1">
                           Admin
                         </span>
                       )}
@@ -550,7 +550,7 @@ export const Header: React.FC<HeaderProps> = ({
                             {m.user.name}
                           </span>
                         </div>
-                        <span className="text-[10px] font-mono uppercase text-neutral-500 bg-white px-1.5 py-0.5 rounded border border-neutral-200/50">
+                        <span className="text-[10px] font-inter uppercase text-neutral-500 bg-white px-1.5 py-0.5 rounded border border-neutral-200/50">
                           {m.role}
                         </span>
                       </div>

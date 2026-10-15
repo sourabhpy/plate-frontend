@@ -336,7 +336,7 @@ export const VoiceTaskModal: React.FC<VoiceTaskModalProps> = ({
                     <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center animate-pulse">
                       <Mic className="w-8 h-8 text-red-600" />
                     </div>
-                    <span className="text-sm font-mono font-bold text-red-700">
+                    <span className="text-sm font-inter font-bold text-red-700">
                       Recording: {recordSeconds}s
                     </span>
                     <Button variant="danger" size="md" onClick={stopRecording}>

@@ -262,7 +262,7 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({
         </div>
 
         {/* Time and Info Row */}
-        <div className="flex items-center justify-between text-xs font-medium text-neutral-500 font-mono">
+        <div className="flex items-center justify-between text-xs font-medium text-neutral-500 font-inter">
           <span>
             {isPlaying || currentTime > 0
               ? formatTime(currentTime)
@@ -279,7 +279,7 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({
       <button
         type="button"
         onClick={handleSpeedToggle}
-        className="px-2 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold font-mono transition-colors flex-shrink-0"
+        className="px-2 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold font-inter transition-colors flex-shrink-0"
         title="Playback Speed"
       >
         <span className="line-clamp-1">{playbackRate}x</span>

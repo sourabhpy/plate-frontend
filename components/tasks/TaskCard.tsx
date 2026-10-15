@@ -60,7 +60,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onDragStart }
       onDragStart={(e) => onDragStart && onDragStart(e, task.id)}
       onClick={onClick}
       className={clsx(
-        "group bg-neutral-100 rounded-xl p-4 transition-all cursor-grab active:cursor-grabbing flex flex-col gap-3 select-none",
+        "group bg-neutral-100/70 rounded-xl p-4 transition-all cursor-grab active:cursor-grabbing flex flex-col gap-3 select-none",
         isDone && "bg-neutral-50/70 opacity-80"
       )}
     >
@@ -126,7 +126,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onDragStart }
         </div>
 
         {task.labels && task.labels.length > 0 && (
-          <span className="text-xs text-neutral-400 font-mono">
+          <span className="text-xs text-neutral-400 font-inter">
             #{task.labels[0]}
           </span>
         )}

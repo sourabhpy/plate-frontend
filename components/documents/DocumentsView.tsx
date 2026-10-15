@@ -37,7 +37,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ onOpenDocModal }) 
           </p>
           <div className="flex items-center gap-2 pt-2 border-t border-neutral-100">
             <Badge variant="blue" size="sm">Analyzed</Badge>
-            <span className="text-xs text-neutral-400 font-mono">3 suggested tasks committed</span>
+            <span className="text-xs text-neutral-400 font-inter">3 suggested tasks committed</span>
           </div>
         </div>
 
@@ -51,7 +51,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ onOpenDocModal }) 
           </p>
           <div className="flex items-center gap-2 pt-2 border-t border-neutral-100">
             <Badge variant="done" size="sm">Indexed in Memory</Badge>
-            <span className="text-xs text-neutral-400 font-mono">1 blocker identified</span>
+            <span className="text-xs text-neutral-400 font-inter">1 blocker identified</span>
           </div>
         </div>
       </div>

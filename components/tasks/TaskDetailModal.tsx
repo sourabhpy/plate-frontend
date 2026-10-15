@@ -272,7 +272,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   className="flex items-center justify-between p-3 rounded-xl bg-white shadow-[0px_0px_20px_rgba(0,0,0,0.06)] hover:bg-neutral-50 transition-colors text-sm text-neutral-800"
                 >
                   <span className="truncate max-w-[180px] font-medium">{att.file_name}</span>
-                  <span className="text-xs text-neutral-400 font-mono flex-shrink-0 ml-2">
+                  <span className="text-xs text-neutral-400 font-inter flex-shrink-0 ml-2">
                     {Math.round((att.file_size || 0) / 1024)} KB
                   </span>
                 </a>
