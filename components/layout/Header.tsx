@@ -26,6 +26,8 @@ import {
   Layers,
   User as UserIcon,
   UserPlus,
+  UserMinus,
+  Users,
   Settings,
 } from "lucide-react";
 import clsx from "clsx";
@@ -47,10 +49,20 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNotifications,
   unreadCount = 0,
 }) => {
-  const { user, workspaces, activeWorkspace, activeMember, members, isAdmin, switchWorkspace, logout } = useAuth();
+  const { user, workspaces, activeWorkspace, activeMember, members, isAdmin, switchWorkspace, logout, removeMember } = useAuth();
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (confirm(`Remove ${memberName} from this workspace?`)) {
+      try {
+        await removeMember(memberId);
+      } catch (err: any) {
+        alert(err?.message || "Failed to remove member");
+      }
+    }
+  };
 
   // Hook menus and drawer into back stack
   useBackStackOverlay(isMobileDrawerOpen, () => setIsMobileDrawerOpen(false), "mobile-drawer");
@@ -211,20 +223,52 @@ export const Header: React.FC<HeaderProps> = ({
                                 </p>
                               </div>
                             </div>
-                            <span
-                              className={clsx(
-                                "text-[10px] uppercase font-inter px-1.5 py-0.5 rounded-md font-semibold shrink-0",
-                                member.role === "admin"
-                                  ? "bg-neutral-900 text-white border border-neutral-900"
-                                  : "bg-neutral-100 text-neutral-600"
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span
+                                className={clsx(
+                                  "text-[10px] uppercase font-inter px-1.5 py-0.5 rounded-md font-semibold shrink-0",
+                                  member.role === "admin"
+                                    ? "bg-neutral-900 text-white border border-neutral-900"
+                                    : "bg-neutral-100 text-neutral-600"
+                                )}
+                              >
+                                {member.role}
+                              </span>
+
+                              {isAdmin && activeWorkspace?.owner !== member.user?.id && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveMember(member.id, member.user?.name || member.user?.email);
+                                  }}
+                                  className="p-1 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="Remove from workspace"
+                                >
+                                  <UserMinus className="w-3.5 h-3.5" />
+                                </button>
                               )}
-                            >
-                              {member.role}
-                            </span>
+                            </div>
                           </div>
                         ))
                       )}
                     </div>
+
+                    {isAdmin && (
+                      <div className="px-2 pt-2 border-t border-neutral-100 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowWorkspaceMenu(false);
+                            setIsAddUserOpen(true);
+                          }}
+                          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-blue-700 bg-blue-50/70 hover:bg-blue-100/70 rounded-lg border border-blue-200/60 transition-colors"
+                        >
+                          <Users className="w-3.5 h-3.5 text-blue-600" />
+                          Manage / Include Users
+                        </button>
+                      </div>
+                    )}
 
                   </div>
                 </>
@@ -556,12 +600,38 @@ export const Header: React.FC<HeaderProps> = ({
                             {m.user.name}
                           </span>
                         </div>
-                        <span className="text-[10px] font-inter uppercase text-neutral-500 bg-white px-1.5 py-0.5 rounded border border-neutral-200/50">
-                          {m.role}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[10px] font-inter uppercase text-neutral-500 bg-white px-1.5 py-0.5 rounded border border-neutral-200/50">
+                            {m.role}
+                          </span>
+                          {isAdmin && activeWorkspace?.owner !== m.user?.id && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMember(m.id, m.user?.name || m.user?.email)}
+                              className="p-1 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Remove from workspace"
+                            >
+                              <UserMinus className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
+
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileDrawerOpen(false);
+                        setIsAddUserOpen(true);
+                      }}
+                      className="w-full mt-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-blue-700 bg-blue-50 rounded-lg border border-blue-200/60"
+                    >
+                      <Users className="w-3.5 h-3.5 text-blue-600" />
+                      Manage / Include Users
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

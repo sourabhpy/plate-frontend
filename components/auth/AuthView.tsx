@@ -223,7 +223,7 @@ export const AuthView: React.FC = () => {
                     "Create Account & Workspace"
                   ) : (
                     <>
-                      Sign In to 🍽️ <strong className="font-bold">plate</strong>
+                      Sign In to <strong className="font-bold">plate</strong>
                     </>
                   )}
                 </span>

@@ -32,6 +32,13 @@ export interface WorkspaceMember {
   joined_at: string;
 }
 
+export interface SystemUser extends User {
+  is_in_workspace: boolean;
+  member_id?: string;
+  role?: "admin" | "member";
+  title?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   workspaces: Workspace[];
@@ -47,6 +54,9 @@ interface AuthContextType {
   reloadMembers: () => Promise<void>;
   addWorkspace: (name: string) => Promise<Workspace>;
   addUser: (formData: FormData) => Promise<WorkspaceMember>;
+  includeUsers: (userIds: string[], role?: "admin" | "member") => Promise<WorkspaceMember[]>;
+  removeMember: (memberId: string) => Promise<void>;
+  fetchSystemUsers: () => Promise<SystemUser[]>;
   updateProfile: (formData: FormData) => Promise<User>;
 }
 
@@ -212,6 +222,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return member;
   };
 
+  const includeUsers = async (userIds: string[], role: "admin" | "member" = "member"): Promise<WorkspaceMember[]> => {
+    if (!activeWorkspace) throw new Error("No active workspace");
+    const res = await apiRequest<WorkspaceMember[] | WorkspaceMember>("/api/auth/members/", {
+      method: "POST",
+      body: JSON.stringify({ user_ids: userIds, role }),
+      workspaceId: activeWorkspace.id,
+    });
+    const added = Array.isArray(res) ? res : [res];
+    await fetchMembers(activeWorkspace.id);
+    setWorkspaces((prev) =>
+      prev.map((w) =>
+        w.id === activeWorkspace.id ? { ...w, member_count: (w.member_count || 0) + added.length } : w
+      )
+    );
+    return added;
+  };
+
+  const removeMember = async (memberId: string): Promise<void> => {
+    if (!activeWorkspace) throw new Error("No active workspace");
+    await apiRequest(`/api/auth/members/${memberId}/`, {
+      method: "DELETE",
+      workspaceId: activeWorkspace.id,
+    });
+    setMembers((prev) => prev.filter((m) => m.id !== memberId));
+    setWorkspaces((prev) =>
+      prev.map((w) =>
+        w.id === activeWorkspace.id ? { ...w, member_count: Math.max(0, (w.member_count || 1) - 1) } : w
+      )
+    );
+  };
+
+  const fetchSystemUsers = async (): Promise<SystemUser[]> => {
+    return await apiRequest<SystemUser[]>("/api/auth/users/", {
+      workspaceId: activeWorkspace?.id,
+    });
+  };
+
   const updateProfile = async (formData: FormData): Promise<User> => {
     const res = await apiRequest<{ user: User; message: string }>("/api/auth/me/", {
       method: "PATCH",
@@ -249,6 +296,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         reloadMembers: () => (activeWorkspace ? fetchMembers(activeWorkspace.id) : Promise.resolve()),
         addWorkspace,
         addUser,
+        includeUsers,
+        removeMember,
+        fetchSystemUsers,
         updateProfile,
       }}
     >
