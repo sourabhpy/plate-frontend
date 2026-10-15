@@ -151,7 +151,7 @@ export const AuthView: React.FC = () => {
             </div>
 
             {/* Quick Demo Logins */}
-            <div className="p-4 rounded-2xl bg-neutral-50/90 shadow-[0px_0px_20px_rgba(0,0,0,0.04)] flex flex-col gap-2.5">
+            <div className="p-4 rounded-2xl bg-neutral-100 border border-neutral-200 shadow-[0px_0px_20px_rgba(0,0,0,0.04)] flex flex-col gap-2.5">
               <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
                 Quick Demo Logins
               </span>

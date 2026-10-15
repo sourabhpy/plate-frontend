@@ -29,6 +29,8 @@ function PlateApp() {
   // Message extraction context
   const [extractingTranscript, setExtractingTranscript] = useState<string | undefined>(undefined);
   const [extractingMsgId, setExtractingMsgId] = useState<number | undefined>(undefined);
+  const [extractingAudioUrl, setExtractingAudioUrl] = useState<string | undefined>(undefined);
+  const [extractingAudioFileName, setExtractingAudioFileName] = useState<string | undefined>(undefined);
 
   if (isLoading) {
     return (
@@ -44,8 +46,27 @@ function PlateApp() {
   }
 
   const handleExtractTaskFromMessage = (message: MessageItem) => {
+    const isAudio =
+      message.message_type === "audio" ||
+      Boolean(message.audio_url) ||
+      (message.message_type === "file" &&
+        Boolean(
+          message.file_name?.match(/\.(webm|mp3|wav|ogg|m4a|aac|flac)$/i) ||
+            message.content_type?.startsWith("audio/")
+        ));
+
+    const audioUrl =
+      message.audio_url ||
+      (isAudio ? message.file_url || (message as any).file || (message as any).audio_file : undefined);
+
+    const fileName =
+      message.file_name ||
+      (message.message_type === "audio" ? "voice_note.webm" : "audio_recording.webm");
+
     setExtractingTranscript(message.content);
     setExtractingMsgId(message.id);
+    setExtractingAudioUrl(audioUrl);
+    setExtractingAudioFileName(audioUrl ? fileName : undefined);
     setIsVoiceModalOpen(true);
   };
 
@@ -57,6 +78,8 @@ function PlateApp() {
         onOpenVoiceModal={() => {
           setExtractingTranscript(undefined);
           setExtractingMsgId(undefined);
+          setExtractingAudioUrl(undefined);
+          setExtractingAudioFileName(undefined);
           setIsVoiceModalOpen(true);
         }}
         onOpenDocModal={() => setIsDocModalOpen(true)}
@@ -70,6 +93,8 @@ function PlateApp() {
             onOpenVoiceModal={() => {
               setExtractingTranscript(undefined);
               setExtractingMsgId(undefined);
+              setExtractingAudioUrl(undefined);
+              setExtractingAudioFileName(undefined);
               setIsVoiceModalOpen(true);
             }}
             onOpenDocModal={() => setIsDocModalOpen(true)}
@@ -92,9 +117,13 @@ function PlateApp() {
           setIsVoiceModalOpen(false);
           setExtractingTranscript(undefined);
           setExtractingMsgId(undefined);
+          setExtractingAudioUrl(undefined);
+          setExtractingAudioFileName(undefined);
         }}
         initialTranscript={extractingTranscript}
         initialMessageId={extractingMsgId}
+        initialAudioUrl={extractingAudioUrl}
+        initialAudioFileName={extractingAudioFileName}
         onTasksCommitted={() => {
           // Switch to board to see the new tasks immediately
           setActiveTab("board");

@@ -188,7 +188,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         {/* Evidence Quote (if extracted by AI) */}
         {task.evidence_quote && (
           <div className="p-4 bg-blue-50/70 rounded-xl shadow-[0px_0px_20px_rgba(37,99,235,0.08)] flex items-start gap-3 text-sm text-blue-950">
-            <MessageSquareQuote className="w-5 h-5 text-blue-600 shrink-0 mt-0.5 flex-shrink-0" />
+            <MessageSquareQuote className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div>
               <span className="font-semibold text-blue-900 block mb-0.5">
                 AI Source Evidence ({task.source_type}):

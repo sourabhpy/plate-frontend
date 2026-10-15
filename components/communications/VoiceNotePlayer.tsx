@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Play, Pause, Mic } from "lucide-react";
 import clsx from "clsx";
 
@@ -31,18 +31,43 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({
   const [playbackRate, setPlaybackRate] = useState<1 | 1.5 | 2>(1);
   const [isScrubbing, setIsScrubbing] = useState(false);
 
-  // Sync with global activePlayingId
+  // Keep references to prevent unnecessary re-creations
+  const onPlayRef = useRef(onPlay);
+  onPlayRef.current = onPlay;
+
+  const onPauseRef = useRef(onPause);
+  onPauseRef.current = onPause;
+
+  const isScrubbingRef = useRef(false);
+  isScrubbingRef.current = isScrubbing;
+
+  // Resolve normalized URL
+  const normalizedUrl = useMemo(() => {
+    if (!audioUrl) return "";
+    if (audioUrl.startsWith("http://") || audioUrl.startsWith("https://") || audioUrl.startsWith("blob:")) {
+      return audioUrl;
+    }
+    const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    return `${base}${audioUrl.startsWith("/") ? "" : "/"}${audioUrl}`;
+  }, [audioUrl]);
+
+  // Sync with global activePlayingId: when another audio starts playing, pause this one
   useEffect(() => {
     if (!isCurrent && isPlaying) {
-      audioRef.current?.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       setIsPlaying(false);
     }
   }, [isCurrent, isPlaying]);
 
-  // Audio setup
+  // Audio setup - only runs when normalizedUrl changes
   useEffect(() => {
-    const audio = new Audio(audioUrl);
+    if (!normalizedUrl) return;
+
+    const audio = new Audio(normalizedUrl);
     audioRef.current = audio;
+    audio.preload = "metadata";
 
     const handleLoadedMetadata = () => {
       if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
@@ -51,7 +76,7 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({
     };
 
     const handleTimeUpdate = () => {
-      if (!isScrubbing) {
+      if (!isScrubbingRef.current) {
         setCurrentTime(audio.currentTime);
       }
     };
@@ -59,20 +84,27 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({
     const handleEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
-      onPause();
+      onPauseRef.current?.();
+    };
+
+    const handleError = (e: Event) => {
+      console.error("Audio player error on URL:", normalizedUrl, e, audio.error);
+      setIsPlaying(false);
     };
 
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("error", handleError);
 
     return () => {
       audio.pause();
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("error", handleError);
     };
-  }, [audioUrl, isScrubbing, onPause]);
+  }, [normalizedUrl]);
 
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -81,13 +113,19 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({
     if (isPlaying) {
       audio.pause();
       setIsPlaying(false);
-      onPause();
+      onPauseRef.current?.();
     } else {
       audio.playbackRate = playbackRate;
-      audio.play().then(() => {
-        setIsPlaying(true);
-        onPlay(messageId);
-      }).catch(console.error);
+      onPlayRef.current?.(messageId);
+      audio
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+        })
+        .catch((err) => {
+          console.error("Failed to play audio:", err);
+          setIsPlaying(false);
+        });
     }
   };
 
@@ -104,24 +142,23 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({
     if (!progressBarRef.current) return 0;
     const rect = progressBarRef.current.getBoundingClientRect();
     const offsetX = Math.max(0, Math.min(clientX - rect.left, rect.width));
-    return (offsetX / rect.width);
+    return rect.width > 0 ? offsetX / rect.width : 0;
   }, []);
 
   const handleScrubStart = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsScrubbing(true);
-    const fraction = calculateProgressFromEvent(e.clientX);
-    const newTime = fraction * (totalDuration || 1);
+    let lastFraction = calculateProgressFromEvent(e.clientX);
+    const newTime = lastFraction * (totalDuration || 1);
     setCurrentTime(newTime);
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const moveFraction = calculateProgressFromEvent(moveEvent.clientX);
-      setCurrentTime(moveFraction * (totalDuration || 1));
+      lastFraction = calculateProgressFromEvent(moveEvent.clientX);
+      setCurrentTime(lastFraction * (totalDuration || 1));
     };
 
-    const handleMouseUp = (upEvent: MouseEvent) => {
-      const upFraction = calculateProgressFromEvent(upEvent.clientX);
-      const finalTime = upFraction * (totalDuration || 1);
+    const handleMouseUp = () => {
+      const finalTime = lastFraction * (totalDuration || 1);
       setCurrentTime(finalTime);
       if (audioRef.current) {
         audioRef.current.currentTime = finalTime;
@@ -138,19 +175,21 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     setIsScrubbing(true);
     const touch = e.touches[0];
-    const fraction = calculateProgressFromEvent(touch.clientX);
-    const newTime = fraction * (totalDuration || 1);
+    let lastFraction = calculateProgressFromEvent(touch.clientX);
+    const newTime = lastFraction * (totalDuration || 1);
     setCurrentTime(newTime);
 
     const handleTouchMove = (moveEvent: TouchEvent) => {
       const moveTouch = moveEvent.touches[0];
-      const moveFraction = calculateProgressFromEvent(moveTouch.clientX);
-      setCurrentTime(moveFraction * (totalDuration || 1));
+      lastFraction = calculateProgressFromEvent(moveTouch.clientX);
+      setCurrentTime(lastFraction * (totalDuration || 1));
     };
 
     const handleTouchEnd = () => {
+      const finalTime = lastFraction * (totalDuration || 1);
+      setCurrentTime(finalTime);
       if (audioRef.current) {
-        audioRef.current.currentTime = currentTime;
+        audioRef.current.currentTime = finalTime;
       }
       setIsScrubbing(false);
       window.removeEventListener("touchmove", handleTouchMove);
@@ -168,9 +207,10 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({
     return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
   };
 
-  const progressPercent = totalDuration > 0
-    ? Math.min(100, Math.max(0, (currentTime / totalDuration) * 100))
-    : 0;
+  const progressPercent =
+    totalDuration > 0
+      ? Math.min(100, Math.max(0, (currentTime / totalDuration) * 100))
+      : 0;
 
   return (
     <div className="flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] w-full max-w-sm mt-1.5 select-none border-none">
@@ -223,7 +263,11 @@ export const VoiceNotePlayer: React.FC<VoiceNotePlayerProps> = ({
 
         {/* Time and Info Row */}
         <div className="flex items-center justify-between text-xs font-medium text-neutral-500 font-mono">
-          <span>{isPlaying || currentTime > 0 ? formatTime(currentTime) : formatTime(totalDuration)}</span>
+          <span>
+            {isPlaying || currentTime > 0
+              ? formatTime(currentTime)
+              : formatTime(totalDuration)}
+          </span>
           <div className="flex items-center gap-1.5 text-neutral-400">
             <Mic className="w-3 h-3 text-blue-500 flex-shrink-0" />
             <span className="font-sans text-[11px] text-neutral-400">Voice Note</span>

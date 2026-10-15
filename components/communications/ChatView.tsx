@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth, WorkspaceMember } from "@/lib/auth-context";
 import { apiRequest } from "@/lib/api";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Modal } from "@/components/ui/Modal";
 import {
   Hash,
   Lock,
@@ -17,6 +18,7 @@ import {
   MessageSquare,
   Search,
   MoreVertical,
+  ChevronRight,
   Play,
   Pause,
   Download,
@@ -96,6 +98,26 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
   const [activeThreadParent, setActiveThreadParent] = useState<MessageItem | null>(null);
   const [threadReplies, setThreadReplies] = useState<MessageItem[]>([]);
   const [threadInput, setThreadInput] = useState("");
+
+  // Mobile Message Action Bottom Sheet
+  const [activeMobileActionMessage, setActiveMobileActionMessage] = useState<MessageItem | null>(null);
+
+  // Lock body scroll and handle Escape key for mobile actions bottom sheet
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && activeMobileActionMessage) {
+        setActiveMobileActionMessage(null);
+      }
+    };
+    if (activeMobileActionMessage) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeMobileActionMessage]);
 
   // Audio Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -603,6 +625,44 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
   const channels = conversations.filter((c) => c.type === "channel");
   const directMessages = conversations.filter((c) => c.type === "dm");
 
+  // Group consecutive messages by the same sender sent within 1 minute (60,000ms)
+  const messageGroups = useMemo(() => {
+    const groups: {
+      id: string | number;
+      sender: MessageItem["sender"];
+      created_at: string;
+      messages: MessageItem[];
+    }[] = [];
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const prevGroup = groups[groups.length - 1];
+
+      if (prevGroup) {
+        const prevMsg = prevGroup.messages[prevGroup.messages.length - 1];
+        const sameSender = prevMsg.sender.id === msg.sender.id;
+        const prevTime = new Date(prevMsg.created_at).getTime();
+        const currTime = new Date(msg.created_at).getTime();
+        const isUnderOneMinute =
+          !isNaN(prevTime) && !isNaN(currTime) && Math.abs(currTime - prevTime) < 60 * 1000;
+
+        if (sameSender && isUnderOneMinute) {
+          prevGroup.messages.push(msg);
+          continue;
+        }
+      }
+
+      groups.push({
+        id: msg.id,
+        sender: msg.sender,
+        created_at: msg.created_at,
+        messages: [msg],
+      });
+    }
+
+    return groups;
+  }, [messages]);
+
   const renderChannelsList = (isMobile = false) => (
     <div className="flex flex-col h-full justify-between bg-neutral-50/70">
       <div className="flex flex-col overflow-y-auto">
@@ -692,7 +752,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                     : "text-neutral-700 hover:bg-neutral-100"
                 )}
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 flex-shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
                 <span className="line-clamp-1">{c.display_name}</span>
               </button>
             ))}
@@ -788,107 +848,169 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                 </div>
               )}
 
-              {messages.map((msg) => {
-                const isOwn = msg.sender.id === user?.id;
+              {messageGroups.map((group) => {
+                const firstMsg = group.messages[0];
 
                 return (
                   <div
-                    key={msg.id}
-                    className={clsx(
-                      "group flex items-start gap-3 rounded-xl p-2.5 hover:bg-neutral-50/80 transition-colors",
-                      msg.isOptimistic && "opacity-60"
-                    )}
+                    key={group.id}
+                    className="flex items-start gap-3 rounded-2xl p-2.5 hover:bg-neutral-50/60 transition-colors"
                   >
-                    <Avatar name={msg.sender.name} size="sm" />
+                    <Avatar name={group.sender.name} size="sm" />
 
                     <div className="flex-1 min-w-0">
                       {/* Sender & Timestamp */}
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-sm font-bold text-neutral-900">
-                          {msg.sender.name}
+                      <div className="flex items-center justify-start gap-2 mb-1 min-h-[20px] flex-wrap">
+                        <span className="text-sm font-bold text-neutral-900 truncate">
+                          {group.sender.name}
                         </span>
-                        <span className="text-xs text-neutral-400">
-                          {new Date(msg.created_at).toLocaleTimeString([], {
+                        <span className="text-xs text-neutral-400 flex-shrink-0">
+                          {new Date(firstMsg.created_at).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
                         </span>
-                        {msg.is_edited && (
-                          <span className="text-xs text-neutral-400 italic">edited</span>
-                        )}
                       </div>
 
-                      {/* Message Content or Deleted State */}
-                      {msg.is_deleted || msg.content === "This message was deleted" ? (
-                        <p className="text-sm text-neutral-400 italic flex items-center gap-1.5 mt-1 select-none">
-                          <Ban className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
-                          <span>This message was deleted</span>
-                        </p>
-                      ) : (
-                        <>
-                          {msg.message_type === "text" && (
-                            <p className="text-sm text-neutral-800 leading-relaxed break-words whitespace-pre-wrap">
-                              {msg.content}
-                            </p>
-                          )}
+                      {/* Pooled Messages in this Card */}
+                      <div className="flex flex-col gap-2">
+                        {group.messages.map((msg, idx) => {
+                          const isOwn = msg.sender.id === user?.id;
+                          const isDeleted = msg.is_deleted || msg.content === "This message was deleted";
 
-                          {msg.message_type === "audio" && (
-                            <VoiceNotePlayer
-                              audioUrl={msg.audio_url || (msg as any).audio_file}
-                              duration={msg.audio_duration}
-                              messageId={msg.id}
-                              activePlayingId={playingAudioId}
-                              onPlay={(id) => setPlayingAudioId(id)}
-                              onPause={() => setPlayingAudioId(null)}
-                            />
-                          )}
-
-                          {msg.message_type === "file" && (
-                            <a
-                              href={msg.file_url || (msg as any).file}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-2.5 p-3 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] hover:shadow-[0px_0px_30px_rgba(0,0,0,0.12)] transition-all text-sm text-neutral-900 mt-1.5 max-w-sm"
+                          return (
+                            <div
+                              key={msg.id}
+                              onClick={(e) => {
+                                if (typeof window !== "undefined" && window.innerWidth < 640 && !isDeleted) {
+                                  if ((e.target as HTMLElement).closest("button, a, audio, input, [role='slider']")) {
+                                    return;
+                                  }
+                                  setActiveMobileActionMessage(msg);
+                                }
+                              }}
+                              className={clsx(
+                                "group/item relative rounded-lg transition-colors cursor-pointer sm:cursor-default",
+                                msg.isOptimistic && "opacity-60"
+                              )}
                             >
-                              <Paperclip className="w-4 h-4 text-neutral-500 shrink-0 flex-shrink-0" />
-                              <span className="line-clamp-1 font-medium">{msg.file_name || "Attachment"}</span>
-                              <Download className="w-4 h-4 text-neutral-400 ml-auto flex-shrink-0" />
-                            </a>
-                          )}
+                              {/* Message Content or Deleted State */}
+                              {isDeleted ? (
+                                <p className="text-sm text-neutral-400 italic flex items-center gap-1.5 select-none">
+                                  <Ban className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                                  <span>This message was deleted</span>
+                                </p>
+                              ) : (
+                                <div>
+                                  <div className="flex items-center justify-start gap-2 flex-wrap">
+                                    {msg.message_type === "text" && (
+                                      <p className="text-sm text-neutral-800 leading-relaxed break-words whitespace-pre-wrap">
+                                        {msg.content}
+                                        {msg.is_edited && (
+                                          <span className="text-xs text-neutral-400 italic ml-1.5 select-none">
+                                            (edited)
+                                          </span>
+                                        )}
+                                      </p>
+                                    )}
 
-                          {/* Actions Bar on Hover */}
-                          <div className="mt-1 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => openThread(msg)}
-                              className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-neutral-100"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
-                              <span className="line-clamp-1">
-                                {msg.reply_count > 0 ? `${msg.reply_count} replies` : "Reply in thread"}
-                              </span>
-                            </button>
+                                    {msg.message_type === "audio" && (
+                                      <VoiceNotePlayer
+                                        audioUrl={msg.audio_url || (msg as any).audio_file}
+                                        duration={msg.audio_duration}
+                                        messageId={msg.id}
+                                        activePlayingId={playingAudioId}
+                                        onPlay={(id) => setPlayingAudioId(id)}
+                                        onPause={() => setPlayingAudioId(null)}
+                                      />
+                                    )}
 
-                            <button
-                              onClick={() => onExtractTaskFromMessage && onExtractTaskFromMessage(msg)}
-                              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-blue-50"
-                            >
-                              <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
-                              <span className="line-clamp-1">Extract Task</span>
-                            </button>
+                                    {msg.message_type === "file" && (
+                                      <a
+                                        href={msg.file_url || (msg as any).file}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-2.5 p-3 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] hover:shadow-[0px_0px_30px_rgba(0,0,0,0.12)] transition-all text-sm text-neutral-900 mt-1 max-w-sm"
+                                      >
+                                        <Paperclip className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+                                        <span className="line-clamp-1 font-medium">{msg.file_name || "Attachment"}</span>
+                                        <Download className="w-4 h-4 text-neutral-400 ml-auto flex-shrink-0" />
+                                      </a>
+                                    )}
 
-                            {msg.sender.id === user?.id && (
-                              <button
-                                onClick={() => handleDeleteMessage(msg.id)}
-                                className="text-xs font-semibold text-red-500 hover:text-red-700 flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-red-50 transition-colors"
-                                title="Delete for everyone"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span className="line-clamp-1">Delete</span>
-                              </button>
-                            )}
-                          </div>
-                        </>
-                      )}
+                                    {/* Action buttons alongside the message: desktop hover */}
+                                    {!isDeleted && (
+                                      <>
+                                        <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={() => openThread(msg)}
+                                            className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 flex items-center gap-1 py-0.5 px-1.5 rounded hover:bg-neutral-100 transition-colors"
+                                            title="Reply in thread"
+                                          >
+                                            <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                                            <span className="line-clamp-1">Reply</span>
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => onExtractTaskFromMessage && onExtractTaskFromMessage(msg)}
+                                            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 py-0.5 px-1.5 rounded hover:bg-blue-50 transition-colors"
+                                            title="Extract Task"
+                                          >
+                                            <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                                            <span className="line-clamp-1">Extract Task</span>
+                                          </button>
+
+                                          {isOwn && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleDeleteMessage(msg.id)}
+                                              className="text-xs font-semibold text-red-500 hover:text-red-700 flex items-center gap-1 py-0.5 px-1.5 rounded hover:bg-red-50 transition-colors"
+                                              title="Delete for everyone"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                                              <span className="line-clamp-1">Delete</span>
+                                            </button>
+                                          )}
+                                        </div>
+
+                                        {/* Mobile action button */}
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveMobileActionMessage(msg);
+                                          }}
+                                          className="sm:hidden p-1 text-neutral-400 hover:text-neutral-700 active:bg-neutral-200/60 rounded-md flex-shrink-0"
+                                          title="Message actions"
+                                          aria-label="Message actions"
+                                        >
+                                          <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+
+                                  {/* Thread reply counter pill if there are replies */}
+                                  {msg.reply_count > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => openThread(msg)}
+                                      className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100/80 px-2.5 py-1 rounded-lg transition-colors"
+                                    >
+                                      <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                                      <span>
+                                        {msg.reply_count} {msg.reply_count === 1 ? "reply" : "replies"}
+                                      </span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 );
@@ -942,7 +1064,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                     size="sm"
                     disabled={!inputText.trim() || isSending}
                     isLoading={isSending}
-                    className="shrink-0 flex-shrink-0"
+                    className="flex-shrink-0"
                   >
                     <Send className="w-4 h-4 flex-shrink-0" />
                   </Button>
@@ -1053,16 +1175,28 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                               })}
                             </span>
                           </div>
-                          {!isDeleted && r.sender.id === user?.id && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteMessage(r.id)}
-                              className="opacity-0 group-hover/reply:opacity-100 text-xs text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-all"
-                              title="Delete reply"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
-                            </button>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {!isDeleted && onExtractTaskFromMessage && (
+                              <button
+                                type="button"
+                                onClick={() => onExtractTaskFromMessage(r)}
+                                className="opacity-0 group-hover/reply:opacity-100 text-xs text-blue-600 hover:text-blue-700 p-1 rounded hover:bg-blue-50 transition-all"
+                                title="Extract task"
+                              >
+                                <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                              </button>
+                            )}
+                            {!isDeleted && r.sender.id === user?.id && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMessage(r.id)}
+                                className="opacity-0 group-hover/reply:opacity-100 text-xs text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-all"
+                                title="Delete reply"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {isDeleted ? (
                           <p className="text-xs text-neutral-400 italic flex items-center gap-1 mt-0.5 select-none">
@@ -1148,6 +1282,129 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
               <Button size="sm" onClick={handleCreateConversation}>
                 <span className="line-clamp-1">{createType === "channel" ? "Create Channel" : "Start Chat"}</span>
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Message Actions Bottom Sheet (Full Width) */}
+      {activeMobileActionMessage && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0"
+            onClick={() => setActiveMobileActionMessage(null)}
+            aria-hidden="true"
+          />
+          <div className="relative w-full bg-white rounded-t-2xl shadow-[0px_-8px_30px_rgba(0,0,0,0.15)] flex flex-col max-h-[90vh] z-10 animate-in slide-in-from-bottom duration-200 overflow-hidden pb-safe">
+            {/* Grab handle indicator */}
+            <div className="pt-3 pb-1 flex justify-center">
+              <div className="w-10 h-1 bg-neutral-300 rounded-full" />
+            </div>
+
+            {/* Header: Sender info + Close */}
+            <div className="flex items-center justify-between px-5 pt-2 pb-3.5 border-b border-neutral-100">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Avatar name={activeMobileActionMessage.sender.name} size="lg" />
+                <div className="min-w-0">
+                  <span className="text-sm font-bold text-neutral-900 truncate block">
+                    {activeMobileActionMessage.sender.name}
+                  </span>
+                  <span className="text-xs text-neutral-400 font-normal">
+                    {new Date(activeMobileActionMessage.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveMobileActionMessage(null)}
+                className="text-neutral-400 hover:text-neutral-700 p-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 flex-shrink-0" />
+              </button>
+            </div>
+
+            {/* Action buttons list */}
+            <div className="p-4 flex flex-col gap-1.5 overflow-y-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  const msg = activeMobileActionMessage;
+                  setActiveMobileActionMessage(null);
+                  openThread(msg);
+                }}
+                className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-neutral-100 active:bg-neutral-200 text-left transition-colors font-semibold text-sm text-neutral-800"
+              >
+                <div className="w-9 h-9 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-600 flex-shrink-0">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span>Reply in thread</span>
+                  <span className="text-xs text-neutral-400 font-normal">
+                    {activeMobileActionMessage.reply_count > 0
+                      ? `${activeMobileActionMessage.reply_count} replies`
+                      : "Start discussion thread"}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const msg = activeMobileActionMessage;
+                  setActiveMobileActionMessage(null);
+                  if (onExtractTaskFromMessage) {
+                    onExtractTaskFromMessage(msg);
+                  }
+                }}
+                className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-blue-50 active:bg-blue-100 text-left transition-colors font-semibold text-sm text-blue-600"
+              >
+                <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span>Extract Task with AI</span>
+                  <span className="text-xs text-blue-400 font-normal">
+                    Convert commitments into actionable tasks
+                  </span>
+                </div>
+              </button>
+
+              {activeMobileActionMessage.sender.id === user?.id && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const msg = activeMobileActionMessage;
+                    setActiveMobileActionMessage(null);
+                    handleDeleteMessage(msg.id);
+                  }}
+                  className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-red-50 active:bg-red-100 text-left transition-colors font-semibold text-sm text-red-600"
+                >
+                  <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-red-600 flex-shrink-0">
+                    <Trash2 className="w-4 h-4" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span>Delete message</span>
+                    <span className="text-xs text-red-400 font-normal">
+                      Delete this message for everyone
+                    </span>
+                  </div>
+                </button>
+              )}
+
+              <div className="pt-2 mt-1 border-t border-neutral-100">
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => setActiveMobileActionMessage(null)}
+                  className="w-full"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           </div>
         </div>

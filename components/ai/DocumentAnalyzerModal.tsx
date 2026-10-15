@@ -118,7 +118,7 @@ export const DocumentAnalyzerModal: React.FC<DocumentAnalyzerModalProps> = ({
         {!result && (
           <div className="flex flex-col items-center justify-center p-8 rounded-2xl bg-neutral-50/70 shadow-[0px_0px_30px_rgba(0,0,0,0.08)] gap-3.5">
             <Upload className="w-9 h-9 text-neutral-400 flex-shrink-0" />
-            <label className="cursor-pointer text-sm font-semibold text-blue-600 hover:text-blue-700">
+            <label className="cursor-pointer text-sm font-semibold text-neutral-500 hover:text-neutral-700">
               <span className="line-clamp-1">{selectedFile ? selectedFile.name : "Select PDF, image, or document"}</span>
               <input
                 type="file"
