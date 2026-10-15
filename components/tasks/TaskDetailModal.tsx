@@ -8,6 +8,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { TaskItem } from "./TaskCard";
 import { useAuth, WorkspaceMember } from "@/lib/auth-context";
 import { apiRequest } from "@/lib/api";
+import { FileViewerModal } from "@/components/ui/FileViewerModal";
+import { validateFileUpload } from "@/lib/file-validation";
 import {
   Calendar,
   Clock,
@@ -18,6 +20,8 @@ import {
   ArrowRight,
   MessageSquareQuote,
   Upload,
+  Eye,
+  Download,
 } from "lucide-react";
 
 interface TaskDetailModalProps {
@@ -45,6 +49,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const [assigneeId, setAssigneeId] = useState(task?.assignee?.id || "unassigned");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [viewingAttachment, setViewingAttachment] = useState<{
+    url: string;
+    name: string;
+    type?: string;
+  } | null>(null);
 
   React.useEffect(() => {
     if (task) {
@@ -86,6 +95,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const validation = validateFileUpload(file, { label: "Attachment" });
+    if (!validation.isValid) {
+      alert(validation.error);
+      if (e.target) e.target.value = "";
+      return;
+    }
+
     setIsUploading(true);
     const formData = new FormData();
     formData.append("file", file);
@@ -98,10 +114,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       // Refresh task
       const refreshed = await apiRequest<TaskItem>(`/api/tasks/${task.id}/`);
       onUpdate(refreshed);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to upload attachment", err);
+      alert(err.message || "Failed to upload attachment.");
     } finally {
       setIsUploading(false);
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -256,27 +274,60 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
             <label className="cursor-pointer text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
               <Upload className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="line-clamp-1">{isUploading ? "Uploading..." : "Upload File"}</span>
-              <input type="file" onChange={handleFileUpload} className="hidden" disabled={isUploading} />
+              <span className="line-clamp-1">{isUploading ? "Uploading..." : "Upload File (up to 5MB)"}</span>
+              <input type="file" multiple={false} onChange={handleFileUpload} className="hidden" disabled={isUploading} />
             </label>
           </div>
 
           {task.attachments && task.attachments.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-1">
-              {task.attachments.map((att: any) => (
-                <a
-                  key={att.id}
-                  href={att.file_url || att.file}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between p-3 rounded-xl bg-white shadow-[0px_0px_20px_rgba(0,0,0,0.06)] hover:bg-neutral-50 transition-colors text-sm text-neutral-800"
-                >
-                  <span className="truncate max-w-[180px] font-medium">{att.file_name}</span>
-                  <span className="text-xs text-neutral-400 font-inter flex-shrink-0 ml-2">
-                    {Math.round((att.file_size || 0) / 1024)} KB
-                  </span>
-                </a>
-              ))}
+              {task.attachments.map((att: any) => {
+                const fileUrl = att.file_url || att.file;
+                return (
+                  <div
+                    key={att.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-white shadow-[0px_0px_20px_rgba(0,0,0,0.06)] hover:bg-neutral-50/80 hover:border-neutral-300 border border-neutral-100 transition-all text-sm text-neutral-800 group"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setViewingAttachment({
+                          url: fileUrl,
+                          name: att.file_name || "Attachment",
+                          type: att.file_type || "",
+                        })
+                      }
+                      className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
+                      title={`Preview ${att.file_name} in file viewer`}
+                    >
+                      <Paperclip className="w-3.5 h-3.5 text-neutral-400 group-hover:text-blue-600 flex-shrink-0 transition-colors" />
+                      <span className="truncate font-medium text-neutral-800 group-hover:text-blue-600 transition-colors">
+                        {att.file_name}
+                      </span>
+                    </button>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                      <span className="text-xs text-neutral-400 font-inter">
+                        {Math.round((att.file_size || 0) / 1024)} KB
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setViewingAttachment({
+                            url: fileUrl,
+                            name: att.file_name || "Attachment",
+                            type: att.file_type || "",
+                          })
+                        }
+                        className="p-1 rounded-md text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        title="View in file viewer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-neutral-400 italic">No files attached yet.</p>
@@ -309,6 +360,16 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           </div>
         </div>
       </div>
+
+      {viewingAttachment && (
+        <FileViewerModal
+          isOpen={!!viewingAttachment}
+          onClose={() => setViewingAttachment(null)}
+          fileUrl={viewingAttachment.url}
+          fileName={viewingAttachment.name}
+          fileType={viewingAttachment.type}
+        />
+      )}
     </Modal>
   );
 };

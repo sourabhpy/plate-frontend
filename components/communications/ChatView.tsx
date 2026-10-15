@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { useBackStackOverlay } from "@/lib/back-stack";
+import { validateFileUpload } from "@/lib/file-validation";
 import {
   Hash,
   Lock,
@@ -31,9 +32,11 @@ import {
   Trash2,
   Ban,
   AtSign,
+  Eye,
 } from "lucide-react";
 import clsx from "clsx";
 import { VoiceNotePlayer } from "./VoiceNotePlayer";
+import { FileViewerModal } from "@/components/ui/FileViewerModal";
 
 export interface MessageItem {
   id: number;
@@ -514,6 +517,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
   const [newChannelTopic, setNewChannelTopic] = useState("");
   const [selectedDmMemberId, setSelectedDmMemberId] = useState<string>("");
   const [isMobileChannelsOpen, setIsMobileChannelsOpen] = useState(false);
+  const [viewingFile, setViewingFile] = useState<{
+    url: string | null;
+    name: string;
+    type: string;
+  } | null>(null);
 
   // Hook ChatView overlays into back stack
   useBackStackOverlay(Boolean(activeThreadParent), () => setActiveThreadParent(null), "chat-thread");
@@ -760,6 +768,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
     const file = e.target.files?.[0];
     if (!file || !activeConversation) return;
 
+    const validation = validateFileUpload(file, { label: "Attachment" });
+    if (!validation.isValid) {
+      alert(validation.error);
+      if (e.target) e.target.value = "";
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
     formData.append("message_type", "file");
@@ -774,8 +789,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
       );
       setMessages((prev) => [...prev, saved]);
       latestMessageIdRef.current = Math.max(latestMessageIdRef.current, saved.id);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to upload attachment", err);
+      alert(err.message || "Failed to upload file.");
+    } finally {
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -823,6 +841,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
 
   const sendAudioMessage = async (blob: Blob) => {
     if (!activeConversation) return;
+
+    const MAX_AUDIO_SIZE = 5 * 1024 * 1024; // 5MB
+    if (blob.size > MAX_AUDIO_SIZE) {
+      alert("Audio message size exceeds the 5MB limit.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("audio_file", blob, "voice_message.webm");
     formData.append("message_type", "audio");
@@ -838,8 +863,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
       );
       setMessages((prev) => [...prev, saved]);
       latestMessageIdRef.current = Math.max(latestMessageIdRef.current, saved.id);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to send audio message", err);
+      alert(err.message || "Failed to send audio message.");
     }
   };
 
@@ -1315,16 +1341,38 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                                     )}
 
                                     {msg.message_type === "file" && (
-                                      <a
-                                        href={msg.file_url || (msg as any).file}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-flex items-center gap-2.5 p-3 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] hover:shadow-[0px_0px_30px_rgba(0,0,0,0.12)] transition-all text-sm text-neutral-900 mt-1 max-w-sm"
-                                      >
-                                        <Paperclip className="w-4 h-4 text-neutral-500 flex-shrink-0" />
-                                        <span className="line-clamp-1 font-medium">{msg.file_name || "Attachment"}</span>
-                                        <Download className="w-4 h-4 text-neutral-400 ml-auto flex-shrink-0" />
-                                      </a>
+                                      <div className="inline-flex items-center gap-1.5 mt-1">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setViewingFile({
+                                              url: msg.file_url || (msg as any).file || null,
+                                              name: msg.file_name || "Attachment",
+                                              type: msg.content_type || "",
+                                            })
+                                          }
+                                          className="inline-flex items-center gap-2.5 p-3 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] hover:shadow-[0px_0px_30px_rgba(0,0,0,0.12)] transition-all text-sm text-neutral-900 max-w-sm text-left group/file cursor-pointer"
+                                        >
+                                          <Paperclip className="w-4 h-4 text-neutral-500 flex-shrink-0 group-hover/file:text-blue-600 transition-colors" />
+                                          <span className="line-clamp-1 font-medium">{msg.file_name || "Attachment"}</span>
+                                          <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded ml-2 flex items-center gap-1 shrink-0">
+                                            <Eye className="w-3 h-3" />
+                                            <span>View</span>
+                                          </span>
+                                        </button>
+                                        {(msg.file_url || (msg as any).file) && (
+                                          <a
+                                            href={msg.file_url || (msg as any).file}
+                                            download={msg.file_name || "Attachment"}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="p-2.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors"
+                                            title="Download file directly"
+                                          >
+                                            <Download className="w-4 h-4" />
+                                          </a>
+                                        )}
+                                      </div>
                                     )}
 
                                     {/* Action buttons alongside the message: desktop hover */}
@@ -1433,9 +1481,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                   onSubmit={handleSendMessage}
                   className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white p-2.5 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
                 >
-                  <label className="cursor-pointer p-1.5 text-neutral-400 hover:text-neutral-700 transition-colors flex-shrink-0">
+                  <label className="cursor-pointer p-1.5 text-neutral-400 hover:text-neutral-700 transition-colors flex-shrink-0" title="Attach file (up to 5MB)">
                     <Paperclip className="w-4 h-4 flex-shrink-0" />
-                    <input type="file" onChange={handleFileUpload} className="hidden" />
+                    <input type="file" multiple={false} onChange={handleFileUpload} className="hidden" />
                   </label>
 
                   <button
@@ -1832,6 +1880,15 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
           </div>
         </div>
       )}
+
+      {/* In-App File Viewer Modal */}
+      <FileViewerModal
+        isOpen={Boolean(viewingFile)}
+        onClose={() => setViewingFile(null)}
+        fileUrl={viewingFile?.url || null}
+        fileName={viewingFile?.name || "Attachment"}
+        fileType={viewingFile?.type || ""}
+      />
     </div>
   );
 };

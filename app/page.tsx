@@ -24,6 +24,15 @@ function PlateApp() {
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(1);
+  const [boardRefreshKey, setBoardRefreshKey] = useState(0);
+
+  const handleTasksCommitted = () => {
+    setBoardRefreshKey((prev) => prev + 1);
+    setActiveTab("board");
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("plate:tasks_updated"));
+    }
+  };
 
   // Message extraction context
   const [extractingTranscript, setExtractingTranscript] = useState<string | undefined>(undefined);
@@ -89,6 +98,7 @@ function PlateApp() {
       <main className="flex-1 flex overflow-hidden">
         {activeTab === "board" && (
           <TaskBoard
+            refreshKey={boardRefreshKey}
             onOpenVoiceModal={() => {
               setExtractingTranscript(undefined);
               setExtractingMsgId(undefined);
@@ -123,19 +133,14 @@ function PlateApp() {
         initialMessageId={extractingMsgId}
         initialAudioUrl={extractingAudioUrl}
         initialAudioFileName={extractingAudioFileName}
-        onTasksCommitted={() => {
-          // Switch to board to see the new tasks immediately
-          setActiveTab("board");
-        }}
+        onTasksCommitted={handleTasksCommitted}
       />
 
       {/* Document Analyzer Modal */}
       <DocumentAnalyzerModal
         isOpen={isDocModalOpen}
         onClose={() => setIsDocModalOpen(false)}
-        onTasksCommitted={() => {
-          setActiveTab("board");
-        }}
+        onTasksCommitted={handleTasksCommitted}
       />
 
       {/* Notifications Drawer */}

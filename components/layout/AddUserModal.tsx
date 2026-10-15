@@ -87,8 +87,8 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose }) =
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith("image/")) {
-        setError("Please select an image file (PNG, JPG, WebP)");
+      if (file.type.startsWith("video/") || !file.type.startsWith("image/")) {
+        setError("Video files are not allowed. Please select an image file (PNG, JPG, WebP)");
         return;
       }
       if (file.size > 5 * 1024 * 1024) {

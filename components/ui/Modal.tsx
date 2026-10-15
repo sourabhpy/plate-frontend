@@ -12,6 +12,7 @@ interface ModalProps {
   description?: React.ReactNode;
   children: React.ReactNode;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "full";
+  zIndexClassName?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -21,6 +22,7 @@ export const Modal: React.FC<ModalProps> = ({
   description,
   children,
   maxWidth = "lg",
+  zIndexClassName,
 }) => {
   // Automatically register this modal on the back stack
   useBackStackOverlay(isOpen, onClose, "modal");
@@ -55,7 +57,12 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
+    <div
+      className={clsx(
+        "fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150",
+        zIndexClassName || "z-50"
+      )}
+    >
       <div
         className="fixed inset-0"
         onClick={onClose}

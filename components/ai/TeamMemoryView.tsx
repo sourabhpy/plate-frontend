@@ -16,6 +16,7 @@ import {
   ArrowRightIcon,
 } from "lucide-react";
 import clsx from "clsx";
+import { FormattedAiAnswer } from "./FormattedAiAnswer";
 
 interface CitationItem {
   source_type: "message" | "task" | "document";
@@ -58,7 +59,7 @@ export const TeamMemoryView: React.FC = () => {
     setCitations([]);
 
     try {
-      const res = await apiRequest<AskMemoryResponse>("/api/ai/ask-memory/", {
+      const res = await apiRequest<AskMemoryResponse>("/api/ai/memory/ask/", {
         method: "POST",
         body: JSON.stringify({ question: q }),
       });
@@ -78,7 +79,7 @@ export const TeamMemoryView: React.FC = () => {
     setIndexMessage(null);
     try {
       const res = await apiRequest<{ status: string; total_embedded: number }>(
-        "/api/ai/batch-index/",
+        "/api/ai/memory/index-batch/",
         { method: "POST" }
       );
       setIndexMessage(`Successfully indexed ${res.total_embedded} records into team memory.`);
@@ -221,8 +222,8 @@ export const TeamMemoryView: React.FC = () => {
                 <strong className="font-bold">plate</strong> Answer
               </span>
             </div>
-            <div className="text-sm sm:text-base text-neutral-800 leading-relaxed whitespace-pre-wrap">
-              {answer}
+            <div className="pt-2">
+              <FormattedAiAnswer content={answer} />
             </div>
           </div>
 

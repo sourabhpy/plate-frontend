@@ -24,11 +24,13 @@ import clsx from "clsx";
 interface TaskBoardProps {
   onOpenVoiceModal?: () => void;
   onOpenDocModal?: () => void;
+  refreshKey?: number;
 }
 
 export const TaskBoard: React.FC<TaskBoardProps> = ({
   onOpenVoiceModal,
   onOpenDocModal,
+  refreshKey,
 }) => {
   const { activeWorkspace, members } = useAuth();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -70,6 +72,16 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
 
   useEffect(() => {
     fetchTasks();
+  }, [activeWorkspace, refreshKey]);
+
+  useEffect(() => {
+    const handleTasksUpdated = () => {
+      fetchTasks();
+    };
+    window.addEventListener("plate:tasks_updated", handleTasksUpdated);
+    return () => {
+      window.removeEventListener("plate:tasks_updated", handleTasksUpdated);
+    };
   }, [activeWorkspace]);
 
   // Filter Tasks
