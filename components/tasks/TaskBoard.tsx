@@ -361,7 +361,11 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
               {/* Member Column Header */}
               <div className="flex items-center justify-between pb-3 px-1 mb-3">
                 <div className="flex items-center gap-2.5">
-                  <Avatar name={member.user.name} size="sm" />
+                  <Avatar
+                    name={member.user.name}
+                    src={member.user.avatar || (member.user as any).avatar_url}
+                    size="sm"
+                  />
                   <div className="truncate max-w-[170px]">
                     <h3 className="text-sm font-bold text-neutral-900 truncate tracking-tight">
                       {member.user.name}

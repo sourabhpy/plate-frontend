@@ -40,6 +40,8 @@ export interface MessageItem {
     id: string;
     name: string;
     email: string;
+    avatar?: string | null;
+    avatar_url?: string | null;
   };
   parent_message: number | null;
   message_type: "text" | "audio" | "file";
@@ -339,6 +341,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
         id: user?.id || "",
         name: user?.name || "Me",
         email: user?.email || "",
+        avatar: user?.avatar || (user as any)?.avatar_url || null,
       },
       parent_message: null,
       message_type: "text",
@@ -856,7 +859,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                     key={group.id}
                     className="flex items-start gap-3 rounded-2xl p-2.5 hover:bg-neutral-50/60 transition-colors"
                   >
-                    <Avatar name={group.sender.name} size="sm" />
+                    <Avatar
+                      name={group.sender.name}
+                      src={group.sender.avatar || (group.sender as any).avatar_url}
+                      size="sm"
+                    />
 
                     <div className="flex-1 min-w-0">
                       {/* Sender & Timestamp */}
@@ -1128,7 +1135,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
             <div className="p-4 border-b border-neutral-100 bg-neutral-50/70 shrink-0">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Avatar name={activeThreadParent.sender.name} size="sm" />
+                  <Avatar
+                    name={activeThreadParent.sender.name}
+                    src={activeThreadParent.sender.avatar || (activeThreadParent.sender as any).avatar_url}
+                    size="sm"
+                  />
                   <span className="text-sm font-bold text-neutral-900">
                     {activeThreadParent.sender.name}
                   </span>
@@ -1163,7 +1174,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                   const isDeleted = r.is_deleted || r.content === "This message was deleted";
                   return (
                     <div key={r.id} className="group/reply flex items-start gap-2.5 text-sm">
-                      <Avatar name={r.sender.name} size="xs" />
+                      <Avatar
+                        name={r.sender.name}
+                        src={r.sender.avatar || (r.sender as any).avatar_url}
+                        size="xs"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 mb-0.5">
                           <div className="flex items-center gap-2 min-w-0">
@@ -1304,7 +1319,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
             {/* Header: Sender info + Close */}
             <div className="flex items-center justify-between px-5 pt-2 pb-3.5 border-b border-neutral-100">
               <div className="flex items-center gap-2.5 min-w-0">
-                <Avatar name={activeMobileActionMessage.sender.name} size="lg" />
+                <Avatar
+                  name={activeMobileActionMessage.sender.name}
+                  src={activeMobileActionMessage.sender.avatar || (activeMobileActionMessage.sender as any).avatar_url}
+                  size="lg"
+                />
                 <div className="min-w-0">
                   <span className="text-sm font-bold text-neutral-900 truncate block">
                     {activeMobileActionMessage.sender.name}

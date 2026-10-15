@@ -25,6 +25,8 @@ export interface TaskItem {
       id: string;
       name: string;
       email: string;
+      avatar?: string | null;
+      avatar_url?: string | null;
     };
     title: string;
   } | null;
@@ -74,7 +76,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onDragStart }
         </div>
 
         {task.assignee && (
-          <Avatar name={task.assignee.user.name} size="xs" />
+          <Avatar
+            name={task.assignee.user.name}
+            src={task.assignee.user.avatar || (task.assignee.user as any).avatar_url}
+            size="xs"
+          />
         )}
       </div>
 

@@ -7,7 +7,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  avatar?: string;
+  avatar?: string | null;
+  avatar_url?: string | null;
   date_joined?: string;
 }
 
@@ -37,12 +38,16 @@ interface AuthContextType {
   activeWorkspace: Workspace | null;
   activeMember: WorkspaceMember | null;
   members: WorkspaceMember[];
+  isAdmin: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, name: string, password: string, workspaceName?: string) => Promise<void>;
   logout: () => void;
   switchWorkspace: (workspaceId: string) => void;
   reloadMembers: () => Promise<void>;
+  addWorkspace: (name: string) => Promise<Workspace>;
+  addUser: (formData: FormData) => Promise<WorkspaceMember>;
+  updateProfile: (formData: FormData) => Promise<User>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,16 +77,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      const savedWsId = localStorage.getItem("plate_active_workspace_id");
       const data = await apiRequest<{
         user: User;
         workspaces: Workspace[];
         active_member: WorkspaceMember | null;
-      }>("/api/auth/me/");
+      }>("/api/auth/me/", { workspaceId: savedWsId || undefined });
 
       setUser(data.user);
       setWorkspaces(data.workspaces);
 
-      const savedWsId = localStorage.getItem("plate_active_workspace_id");
       let selectedWs = data.workspaces.find((w) => w.id === savedWsId);
       if (!selectedWs && data.workspaces.length > 0) {
         selectedWs = data.workspaces[0];
@@ -166,8 +171,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setActiveWorkspace(ws);
       localStorage.setItem("plate_active_workspace_id", ws.id);
       fetchMembers(ws.id);
+      // Reload me with new workspace header
+      apiRequest<{
+        user: User;
+        workspaces: Workspace[];
+        active_member: WorkspaceMember | null;
+      }>("/api/auth/me/", { workspaceId: ws.id })
+        .then((data) => {
+          if (data.active_member) setActiveMember(data.active_member);
+        })
+        .catch(() => {});
     }
   };
+
+  const addWorkspace = async (name: string): Promise<Workspace> => {
+    const newWs = await apiRequest<Workspace>("/api/auth/workspaces/", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+      workspaceId: activeWorkspace?.id,
+    });
+    setWorkspaces((prev) => [...prev, newWs]);
+    setActiveWorkspace(newWs);
+    localStorage.setItem("plate_active_workspace_id", newWs.id);
+    await fetchMembers(newWs.id);
+    await loadUserData();
+    return newWs;
+  };
+
+  const addUser = async (formData: FormData): Promise<WorkspaceMember> => {
+    if (!activeWorkspace) throw new Error("No active workspace");
+    const member = await apiRequest<WorkspaceMember>("/api/auth/members/", {
+      method: "POST",
+      body: formData,
+      workspaceId: activeWorkspace.id,
+    });
+    await fetchMembers(activeWorkspace.id);
+    setWorkspaces((prev) =>
+      prev.map((w) => (w.id === activeWorkspace.id ? { ...w, member_count: (w.member_count || 0) + 1 } : w))
+    );
+    return member;
+  };
+
+  const updateProfile = async (formData: FormData): Promise<User> => {
+    const res = await apiRequest<{ user: User; message: string }>("/api/auth/me/", {
+      method: "PATCH",
+      body: formData,
+      workspaceId: activeWorkspace?.id,
+    });
+    setUser(res.user);
+    if (activeWorkspace) {
+      await fetchMembers(activeWorkspace.id);
+    }
+    return res.user;
+  };
+
+  const isAdmin = Boolean(
+    activeWorkspace?.my_role === "admin" ||
+    activeMember?.role === "admin" ||
+    (user && (user as any).is_staff) ||
+    (user && (user as any).is_superuser)
+  );
 
   return (
     <AuthContext.Provider
@@ -177,18 +240,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         activeWorkspace,
         activeMember,
         members,
+        isAdmin,
         isLoading,
         login,
         register,
         logout,
         switchWorkspace,
         reloadMembers: () => (activeWorkspace ? fetchMembers(activeWorkspace.id) : Promise.resolve()),
+        addWorkspace,
+        addUser,
+        updateProfile,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
+
 
 export function useAuth() {
   const context = useContext(AuthContext);

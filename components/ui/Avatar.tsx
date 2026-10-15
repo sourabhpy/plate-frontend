@@ -9,6 +9,12 @@ interface AvatarProps {
 }
 
 export const Avatar: React.FC<AvatarProps> = ({ name, src, size = "md", className }) => {
+  const [imageError, setImageError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImageError(false);
+  }, [src]);
+
   const getInitials = (str: string) => {
     if (!str) return "U";
     const parts = str.trim().split(/\s+/);
@@ -26,11 +32,23 @@ export const Avatar: React.FC<AvatarProps> = ({ name, src, size = "md", classNam
     xl: "w-12 h-12 text-base",
   };
 
-  if (src) {
+  const resolveUrl = (url?: string | null) => {
+    if (!url) return null;
+    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:") || url.startsWith("blob:")) {
+      return url;
+    }
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    return `${apiBase.replace(/\/$/, "")}${url.startsWith("/") ? "" : "/"}${url}`;
+  };
+
+  const finalSrc = resolveUrl(src);
+
+  if (finalSrc && !imageError) {
     return (
       <img
-        src={src}
+        src={finalSrc}
         alt={name}
+        onError={() => setImageError(true)}
         className={clsx(
           "rounded-full object-cover border border-neutral-200 select-none",
           sizes[size],
@@ -39,6 +57,7 @@ export const Avatar: React.FC<AvatarProps> = ({ name, src, size = "md", classNam
       />
     );
   }
+
 
   return (
     <div

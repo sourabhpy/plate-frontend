@@ -161,7 +161,7 @@ export const AuthView: React.FC = () => {
                   onClick={() => handleDemoLogin("alex@coolcomp.com")}
                   className="px-3 py-2 rounded-xl bg-white hover:bg-neutral-100 text-sm text-neutral-800 font-medium text-left truncate transition-colors shadow-xs"
                 >
-                  Alex (Admin)
+                  Alex (AI Engineer)
                 </button>
                 <button
                   type="button"
