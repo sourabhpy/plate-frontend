@@ -238,7 +238,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   className="w-full justify-start gap-3 shadow-[0px_0px_20px_rgba(0,0,0,0.1)]"
                 >
-                  <Mic className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <Mic className="w-4 h-4 text-white flex-shrink-0" />
                   <span className="line-clamp-1 font-semibold">Voice Task Extraction</span>
                 </Button>
 

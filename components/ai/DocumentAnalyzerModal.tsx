@@ -159,7 +159,7 @@ export const DocumentAnalyzerModal: React.FC<DocumentAnalyzerModalProps> = ({
             {/* Findings & Issues */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-5 rounded-2xl bg-white shadow-[0px_0px_30px_rgba(0,0,0,0.1)]">
-                <span className="text-sm font-bold text-neutral-900 block mb-2.5 flex items-center gap-2">
+                <span className="text-sm font-bold text-neutral-900 mb-2.5 flex items-center gap-2">
                   <FileCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                   <span>Key Findings</span>
                 </span>
@@ -171,7 +171,7 @@ export const DocumentAnalyzerModal: React.FC<DocumentAnalyzerModalProps> = ({
               </div>
 
               <div className="p-5 rounded-2xl bg-red-50/40 shadow-[0px_0px_30px_rgba(239,68,68,0.1)]">
-                <span className="text-sm font-bold text-red-700 block mb-2.5 flex items-center gap-2">
+                <span className="text-sm font-bold text-red-700 mb-2.5 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
                   <span>Flagged Risks & Blockers</span>
                 </span>

@@ -25,8 +25,11 @@ import {
   X,
   UserCheck,
   Menu,
+  Trash2,
+  Ban,
 } from "lucide-react";
 import clsx from "clsx";
+import { VoiceNotePlayer } from "./VoiceNotePlayer";
 
 export interface MessageItem {
   id: number;
@@ -46,6 +49,7 @@ export interface MessageItem {
   file_size?: number;
   content_type?: string;
   is_edited: boolean;
+  is_deleted?: boolean;
   reply_count: number;
   created_at: string;
   updated_at: string;
@@ -151,6 +155,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
         results: MessageItem[];
         latest_id: number;
         poll_cursor: number;
+        deleted_ids?: number[];
       }>(`/api/communications/conversations/${convId}/messages/?after_id=${cursor}`);
 
       if (data.results && data.results.length > 0) {
@@ -161,6 +166,50 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
           return [...prev, ...fresh];
         });
         latestMessageIdRef.current = Math.max(latestMessageIdRef.current, data.latest_id);
+      }
+
+      // Real-time synchronization of deleted messages across all users
+      if (data.deleted_ids && Array.isArray(data.deleted_ids) && data.deleted_ids.length > 0) {
+        const deletedSet = new Set(data.deleted_ids);
+        setMessages((prev) =>
+          prev.map((m) =>
+            deletedSet.has(m.id) && !m.is_deleted
+              ? {
+                  ...m,
+                  is_deleted: true,
+                  content: "This message was deleted",
+                  audio_url: undefined,
+                  file_url: undefined,
+                }
+              : m
+          )
+        );
+        setThreadReplies((prev) =>
+          prev.map((m) =>
+            deletedSet.has(m.id) && !m.is_deleted
+              ? {
+                  ...m,
+                  is_deleted: true,
+                  content: "This message was deleted",
+                  audio_url: undefined,
+                  file_url: undefined,
+                }
+              : m
+          )
+        );
+        if (activeThreadParent && deletedSet.has(activeThreadParent.id) && !activeThreadParent.is_deleted) {
+          setActiveThreadParent((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  is_deleted: true,
+                  content: "This message was deleted",
+                  audio_url: undefined,
+                  file_url: undefined,
+                }
+              : null
+          );
+        }
       }
     } catch (err) {
       // Graceful poll failure without disrupting conversation
@@ -403,6 +452,62 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
       audio.play();
       setPlayingAudioId(id);
       audio.onended = () => setPlayingAudioId(null);
+    }
+  };
+
+  // Delete message for all
+  const handleDeleteMessage = async (msgId: number) => {
+    if (!confirm("Are you sure you want to delete this message for everyone?")) {
+      return;
+    }
+
+    // Optimistically update locally
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId
+          ? {
+              ...m,
+              is_deleted: true,
+              content: "This message was deleted",
+              audio_url: undefined,
+              file_url: undefined,
+            }
+          : m
+      )
+    );
+    setThreadReplies((prev) =>
+      prev.map((m) =>
+        m.id === msgId
+          ? {
+              ...m,
+              is_deleted: true,
+              content: "This message was deleted",
+              audio_url: undefined,
+              file_url: undefined,
+            }
+          : m
+      )
+    );
+    if (activeThreadParent && activeThreadParent.id === msgId) {
+      setActiveThreadParent((prev) =>
+        prev
+          ? {
+              ...prev,
+              is_deleted: true,
+              content: "This message was deleted",
+              audio_url: undefined,
+              file_url: undefined,
+            }
+          : null
+      );
+    }
+
+    try {
+      await apiRequest(`/api/communications/messages/${msgId}/`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.error("Failed to delete message", err);
     }
   };
 
@@ -713,67 +818,77 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
                         )}
                       </div>
 
-                      {/* Message Content by Type */}
-                      {msg.message_type === "text" && (
-                        <p className="text-sm text-neutral-800 leading-relaxed break-words whitespace-pre-wrap">
-                          {msg.content}
+                      {/* Message Content or Deleted State */}
+                      {msg.is_deleted || msg.content === "This message was deleted" ? (
+                        <p className="text-sm text-neutral-400 italic flex items-center gap-1.5 mt-1 select-none">
+                          <Ban className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                          <span>This message was deleted</span>
                         </p>
-                      )}
+                      ) : (
+                        <>
+                          {msg.message_type === "text" && (
+                            <p className="text-sm text-neutral-800 leading-relaxed break-words whitespace-pre-wrap">
+                              {msg.content}
+                            </p>
+                          )}
 
-                      {msg.message_type === "audio" && (
-                        <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] max-w-sm mt-1.5">
-                          <button
-                            onClick={() => togglePlayAudio(msg.id, msg.audio_url || (msg as any).audio_file)}
-                            className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors shrink-0 flex-shrink-0"
-                          >
-                            {playingAudioId === msg.id ? (
-                              <Pause className="w-4 h-4 flex-shrink-0" />
-                            ) : (
-                              <Play className="w-4 h-4 ml-0.5 flex-shrink-0" />
+                          {msg.message_type === "audio" && (
+                            <VoiceNotePlayer
+                              audioUrl={msg.audio_url || (msg as any).audio_file}
+                              duration={msg.audio_duration}
+                              messageId={msg.id}
+                              activePlayingId={playingAudioId}
+                              onPlay={(id) => setPlayingAudioId(id)}
+                              onPause={() => setPlayingAudioId(null)}
+                            />
+                          )}
+
+                          {msg.message_type === "file" && (
+                            <a
+                              href={msg.file_url || (msg as any).file}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-2.5 p-3 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] hover:shadow-[0px_0px_30px_rgba(0,0,0,0.12)] transition-all text-sm text-neutral-900 mt-1.5 max-w-sm"
+                            >
+                              <Paperclip className="w-4 h-4 text-neutral-500 shrink-0 flex-shrink-0" />
+                              <span className="line-clamp-1 font-medium">{msg.file_name || "Attachment"}</span>
+                              <Download className="w-4 h-4 text-neutral-400 ml-auto flex-shrink-0" />
+                            </a>
+                          )}
+
+                          {/* Actions Bar on Hover */}
+                          <div className="mt-1 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => openThread(msg)}
+                              className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-neutral-100"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span className="line-clamp-1">
+                                {msg.reply_count > 0 ? `${msg.reply_count} replies` : "Reply in thread"}
+                              </span>
+                            </button>
+
+                            <button
+                              onClick={() => onExtractTaskFromMessage && onExtractTaskFromMessage(msg)}
+                              className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-blue-50"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span className="line-clamp-1">Extract Task</span>
+                            </button>
+
+                            {msg.sender.id === user?.id && (
+                              <button
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                className="text-xs font-semibold text-red-500 hover:text-red-700 flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-red-50 transition-colors"
+                                title="Delete for everyone"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span className="line-clamp-1">Delete</span>
+                              </button>
                             )}
-                          </button>
-                          <div className="flex-1 flex flex-col">
-                            <span className="text-sm font-semibold text-neutral-900 line-clamp-1">Voice Note</span>
-                            <span className="text-xs text-neutral-400 font-mono">
-                              {msg.audio_duration ? `${Math.round(msg.audio_duration)}s audio` : "Audio message"}
-                            </span>
                           </div>
-                        </div>
+                        </>
                       )}
-
-                      {msg.message_type === "file" && (
-                        <a
-                          href={msg.file_url || (msg as any).file}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2.5 p-3 rounded-xl bg-white shadow-[0px_0px_25px_rgba(0,0,0,0.08)] hover:shadow-[0px_0px_30px_rgba(0,0,0,0.12)] transition-all text-sm text-neutral-900 mt-1.5 max-w-sm"
-                        >
-                          <Paperclip className="w-4 h-4 text-neutral-500 shrink-0 flex-shrink-0" />
-                          <span className="line-clamp-1 font-medium">{msg.file_name || "Attachment"}</span>
-                          <Download className="w-4 h-4 text-neutral-400 ml-auto flex-shrink-0" />
-                        </a>
-                      )}
-
-                      {/* Actions Bar on Hover */}
-                      <div className="mt-1 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => openThread(msg)}
-                          className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-neutral-100"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span className="line-clamp-1">
-                            {msg.reply_count > 0 ? `${msg.reply_count} replies` : "Reply in thread"}
-                          </span>
-                        </button>
-
-                        <button
-                          onClick={() => onExtractTaskFromMessage && onExtractTaskFromMessage(msg)}
-                          className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 py-1 px-1.5 rounded hover:bg-blue-50"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
-                          <span className="line-clamp-1">Extract Task</span>
-                        </button>
-                      </div>
                     </div>
                   </div>
                 );
@@ -852,54 +967,133 @@ export const ChatView: React.FC<ChatViewProps> = ({ onExtractTaskFromMessage }) 
         )}
       </div>
 
-      {/* 3. Thread Replies Drawer */}
+      {/* 3. Thread Replies Drawer / Modal */}
       {activeThreadParent && (
-        <div className="fixed md:relative inset-0 md:inset-auto z-20 w-full md:w-80 shrink-0 bg-white flex flex-col md:border-l md:border-neutral-200 shadow-2xl md:shadow-none animate-in slide-in-from-right duration-200">
-          <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
-            <span className="text-sm font-bold text-neutral-900">Thread</span>
-            <button
-              onClick={() => setActiveThreadParent(null)}
-              className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-800 flex-shrink-0"
-            >
-              <X className="w-5 h-5 flex-shrink-0" />
-            </button>
-          </div>
+        <>
+          {/* Mobile Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 md:hidden animate-in fade-in duration-200"
+            onClick={() => setActiveThreadParent(null)}
+          />
 
-          <div className="p-4 border-b border-neutral-100 bg-neutral-50/60">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Avatar name={activeThreadParent.sender.name} size="xs" />
-              <span className="text-sm font-bold text-neutral-900">
-                {activeThreadParent.sender.name}
-              </span>
-            </div>
-            <p className="text-sm text-neutral-700 leading-relaxed">{activeThreadParent.content}</p>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-            {threadReplies.map((r) => (
-              <div key={r.id} className="flex items-start gap-2.5 text-sm">
-                <Avatar name={r.sender.name} size="xs" />
-                <div className="flex-1">
-                  <span className="font-semibold text-neutral-900">{r.sender.name}</span>
-                  <p className="text-neutral-700 mt-0.5 text-sm leading-relaxed">{r.content}</p>
-                </div>
+          <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-96 md:relative md:inset-auto md:z-20 md:w-80 lg:w-96 shrink-0 bg-white flex flex-col md:border-l md:border-neutral-200 shadow-2xl md:shadow-none animate-in slide-in-from-right duration-200">
+            {/* Thread Header */}
+            <div className="h-14 sm:h-16 px-4 border-b border-neutral-200 flex items-center justify-between bg-white shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-base font-bold text-neutral-950">Thread</span>
+                {activeConversation && (
+                  <span className="text-xs text-neutral-500 truncate max-w-[150px]">
+                    in #{activeConversation.name}
+                  </span>
+                )}
+                {threadReplies.length > 0 && (
+                  <Badge variant="neutral" size="sm">
+                    {threadReplies.length}
+                  </Badge>
+                )}
               </div>
-            ))}
-          </div>
+              <button
+                type="button"
+                onClick={() => setActiveThreadParent(null)}
+                className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-500 hover:text-neutral-900 transition-colors flex-shrink-0"
+                aria-label="Close thread"
+              >
+                <X className="w-5 h-5 flex-shrink-0" />
+              </button>
+            </div>
 
-          <form onSubmit={handleSendThreadReply} className="p-3 border-t border-neutral-200 flex gap-2">
-            <input
-              type="text"
-              value={threadInput}
-              onChange={(e) => setThreadInput(e.target.value)}
-              placeholder="Reply..."
-              className="flex-1 h-9 text-sm border border-neutral-200 rounded-lg px-3 focus:outline-none focus:border-blue-500"
-            />
-            <Button size="sm" type="submit" disabled={!threadInput.trim()}>
-              <span className="line-clamp-1">Reply</span>
-            </Button>
-          </form>
-        </div>
+            {/* Parent Original Message */}
+            <div className="p-4 border-b border-neutral-100 bg-neutral-50/70 shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Avatar name={activeThreadParent.sender.name} size="sm" />
+                  <span className="text-sm font-bold text-neutral-900">
+                    {activeThreadParent.sender.name}
+                  </span>
+                </div>
+                <span className="text-xs text-neutral-400">
+                  {new Date(activeThreadParent.created_at).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+              {activeThreadParent.is_deleted || activeThreadParent.content === "This message was deleted" ? (
+                <p className="text-sm text-neutral-400 italic flex items-center gap-1.5 select-none">
+                  <Ban className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                  <span>This message was deleted</span>
+                </p>
+              ) : (
+                <p className="text-sm text-neutral-800 leading-relaxed font-normal">
+                  {activeThreadParent.content}
+                </p>
+              )}
+            </div>
+
+            {/* Thread Replies List */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 min-h-0">
+              {threadReplies.length === 0 ? (
+                <div className="py-12 text-center text-sm text-neutral-400">
+                  No replies yet. Start the thread conversation!
+                </div>
+              ) : (
+                threadReplies.map((r) => {
+                  const isDeleted = r.is_deleted || r.content === "This message was deleted";
+                  return (
+                    <div key={r.id} className="group/reply flex items-start gap-2.5 text-sm">
+                      <Avatar name={r.sender.name} size="xs" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-semibold text-neutral-900 text-sm truncate">{r.sender.name}</span>
+                            <span className="text-[11px] text-neutral-400 flex-shrink-0">
+                              {new Date(r.created_at).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                          {!isDeleted && r.sender.id === user?.id && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMessage(r.id)}
+                              className="opacity-0 group-hover/reply:opacity-100 text-xs text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-all"
+                              title="Delete reply"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                            </button>
+                          )}
+                        </div>
+                        {isDeleted ? (
+                          <p className="text-xs text-neutral-400 italic flex items-center gap-1 mt-0.5 select-none">
+                            <Ban className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+                            <span>This message was deleted</span>
+                          </p>
+                        ) : (
+                          <p className="text-neutral-700 text-sm leading-relaxed">{r.content}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Thread Reply Composer */}
+            <form onSubmit={handleSendThreadReply} className="p-3 sm:p-4 border-t border-neutral-200 bg-white flex items-center gap-2 shrink-0 pb-safe">
+              <input
+                type="text"
+                value={threadInput}
+                onChange={(e) => setThreadInput(e.target.value)}
+                placeholder="Reply in thread..."
+                className="flex-1 h-10 px-3.5 text-base sm:text-sm bg-neutral-50 rounded-xl border border-neutral-200 focus:outline-none focus:bg-white focus:border-neutral-900 transition-colors"
+              />
+              <Button size="sm" type="submit" disabled={!threadInput.trim()} className="h-10 px-4">
+                <span className="line-clamp-1 text-start">Reply</span>
+              </Button>
+            </form>
+          </div>
+        </>
       )}
 
       {/* Create Channel / DM Dialog */}

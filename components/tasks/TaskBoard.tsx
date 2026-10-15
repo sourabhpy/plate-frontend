@@ -228,7 +228,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 text-sm px-3 rounded-lg border border-neutral-200 bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-500 flex-shrink-0"
+            className="h-9 text-sm px-3 rounded-lg border border-neutral-200 bg-white text-neutral-800 focus:outline-none focus:border-blue-500 flex-shrink-0"
           >
             <option value="all">All Statuses</option>
             <option value="inbox">Inbox</option>
@@ -242,7 +242,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="h-9 text-sm px-3 rounded-lg border border-neutral-200 bg-white text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-500 hidden sm:block flex-shrink-0"
+            className="h-9 text-sm px-3 rounded-lg border border-neutral-200 bg-white text-neutral-800 focus:outline-none focus:border-blue-500 hidden sm:block flex-shrink-0"
           >
             <option value="all">All Priorities</option>
             <option value="urgent">Urgent</option>
@@ -276,7 +276,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
               onClick={onOpenVoiceModal}
               className="shadow-xs"
             >
-              <Mic className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <Mic className="w-4 h-4 text-neutral-700 flex-shrink-0" />
               <span className="line-clamp-1">Voice Task</span>
             </Button>
           )}

@@ -32,7 +32,6 @@ export const PlateBrand: React.FC<PlateBrandProps> = ({
         🍽️
       </span>
       <span className="font-bold lowercase">plate</span>
-      {showDot && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mb-0.5 flex-shrink-0" />}
     </div>
   );
 };
